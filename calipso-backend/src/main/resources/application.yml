@@ -1,0 +1,30 @@
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: calipso
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/calpso_sms_db
+    username: calpso_user
+    password: calpso_password
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

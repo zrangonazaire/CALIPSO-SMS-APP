@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: calpso_sms_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: calpso_sms_db
+      POSTGRES_USER: calpso_user
+      POSTGRES_PASSWORD: calpso_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - calpso_sms_postgres_data:/var/lib/postgresql/data
+    networks:
+      - calpso_sms_network
+
+volumes:
+  calpso_sms_postgres_data:
+
+networks:
+  calpso_sms_network:
+    driver: bridge
