@@ -20,6 +20,7 @@ public class CompanyController {
                 .name(request.name())
                 .email(request.email())
                 .phone(request.phone())
+                .senderPhone(request.senderPhone())
                 .address(request.address())
                 .contactName(request.contactName())
                 .businessType(request.businessType())
@@ -39,6 +40,25 @@ public class CompanyController {
     public Company findById(@PathVariable Long id) {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
+    }
+
+    @PutMapping("/{id}")
+    public Company update(
+            @PathVariable Long id,
+            @RequestBody @Valid CreateCompanyRequest request
+    ) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
+
+        company.setName(request.name());
+        company.setEmail(request.email());
+        company.setPhone(request.phone());
+        company.setSenderPhone(request.senderPhone());
+        company.setAddress(request.address());
+        company.setContactName(request.contactName());
+        company.setBusinessType(request.businessType());
+
+        return companyRepository.save(company);
     }
 
     @PostMapping("/{id}/wallet/recharge")

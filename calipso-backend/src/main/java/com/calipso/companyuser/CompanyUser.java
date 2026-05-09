@@ -1,5 +1,6 @@
 package com.calipso.companyuser;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.calipso.compagny.Company;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,6 +31,10 @@ public class CompanyUser {
 
     @Column(nullable = false)
     private String email;
+
+    @JsonIgnore
+    @Column
+    private String passwordHash;
 
     private String phone;
 

@@ -27,6 +27,8 @@ public class Company {
 
     private String phone;
 
+    private String senderPhone;
+
     private String address;
 
     private String contactName;

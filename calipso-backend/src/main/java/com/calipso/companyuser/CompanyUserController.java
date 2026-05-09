@@ -4,6 +4,7 @@ import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +16,7 @@ public class CompanyUserController {
 
     private final CompanyUserRepository userRepository;
     private final CompanyRepository companyRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping
     public CompanyUser create(@RequestBody @Valid CreateCompanyUserRequest request) {
@@ -30,6 +32,7 @@ public class CompanyUserController {
                 .fullName(request.fullName())
                 .username(request.username())
                 .email(request.email())
+                .passwordHash(passwordEncoder.encode(request.password()))
                 .phone(request.phone())
                 .role(request.role() == null ? CompanyUserRole.OPERATOR : request.role())
                 .active(true)

@@ -9,6 +9,7 @@ public record CreateCompanyUserRequest(
         @NotBlank String fullName,
         @NotBlank String username,
         @Email @NotBlank String email,
+        @NotBlank String password,
         String phone,
         CompanyUserRole role
 ) {

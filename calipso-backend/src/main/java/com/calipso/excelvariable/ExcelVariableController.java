@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.calipso.importprofile.ExcelImportProfile;
 import com.calipso.importprofile.ExcelImportProfileRepository;
+import com.calipso.config.DataType;
 
 import java.util.List;
 
@@ -30,13 +31,16 @@ public class ExcelVariableController {
                 });
 
         boolean phone = Boolean.TRUE.equals(request.phone());
+        if (phone && !variableRepository.findByProfileIdAndPhoneTrueAndActiveTrue(profile.getId()).isEmpty()) {
+            throw new RuntimeException("Une variable destinataire SMS existe deja pour ce profil");
+        }
 
         ExcelVariable variable = ExcelVariable.builder()
                 .company(profile.getCompany())
                 .profile(profile)
                 .code(code)
                 .label(request.label())
-                .dataType(request.dataType())
+                .dataType(phone ? DataType.PHONE : request.dataType())
                 .required(phone || Boolean.TRUE.equals(request.required()))
                 .phone(phone)
                 .active(true)
