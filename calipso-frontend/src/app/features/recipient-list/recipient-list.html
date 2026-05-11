@@ -1,0 +1,41 @@
+<div class="container-fluid">
+  <div class="mb-4">
+    <h2 class="page-title mb-1">Destinataires</h2>
+    <p class="text-muted mb-0">Liste des contacts importes par campagne.</p>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <label class="form-label">Entreprise</label>
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadCampaigns()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Campagne</label>
+      <select class="form-select" [(ngModel)]="campaignId" (ngModelChange)="loadRecipients()">
+        <option *ngFor="let campaign of campaigns" [ngValue]="campaign.id">{{ campaign.name }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card atlas-card">
+    <div class="card-body">
+      <table class="table align-middle">
+        <thead><tr><th>Telephone</th><th>Message</th><th>Segments</th><th>Statut</th><th>Erreur</th></tr></thead>
+        <tbody>
+          <tr *ngFor="let recipient of recipients">
+            <td class="fw-semibold">{{ recipient.phoneNumber || '-' }}</td>
+            <td>{{ recipient.generatedMessage || '-' }}</td>
+            <td>{{ recipient.segmentCount || 0 }}</td>
+            <td><span class="badge badge-soft-primary">{{ recipient.status }}</span></td>
+            <td>{{ recipient.errorMessage || '-' }}</td>
+          </tr>
+          <tr *ngIf="recipients.length === 0"><td colspan="5" class="text-center text-muted py-4">Aucun destinataire.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

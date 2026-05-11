@@ -1,0 +1,211 @@
+.subscription-page {
+  display: block;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.wallet-actions {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 120px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.balance-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 22px;
+  background: #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.balance-panel > div {
+  min-height: 118px;
+  padding: 22px;
+  background: #fff;
+}
+
+.panel-label,
+.section-title,
+.active-strip span {
+  display: block;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.balance-panel strong {
+  display: block;
+  margin: 6px 0;
+  color: #172554;
+  font-size: 1.7rem;
+}
+
+.balance-panel small {
+  color: #64748b;
+}
+
+.active-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px 22px;
+  color: #fff;
+  background: linear-gradient(135deg, #172554, #2563eb);
+  border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(37, 99, 235, 0.24);
+}
+
+.active-strip strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1.1rem;
+}
+
+.section-title {
+  margin: 8px 0 14px;
+  color: #172554;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.plan-card {
+  display: flex;
+  min-height: 390px;
+  overflow: hidden;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.plan-card.featured {
+  border-color: #2563eb;
+  box-shadow: 0 16px 40px rgba(37, 99, 235, 0.18);
+}
+
+.plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 58px;
+  padding: 0 20px;
+  color: #172554;
+  background: #eef2ff;
+  font-weight: 800;
+}
+
+.plan-header em {
+  padding: 4px 8px;
+  color: #166534;
+  background: #dcfce7;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.plan-body {
+  flex: 1;
+  padding: 24px 20px;
+}
+
+.price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.price strong {
+  color: #0f172a;
+  font-size: 2.4rem;
+}
+
+.price span {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.plan-body p {
+  min-height: 42px;
+  color: #64748b;
+  text-align: center;
+}
+
+.plan-body ul {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 22px 0 0;
+  list-style: none;
+}
+
+.plan-body li {
+  color: #334155;
+  font-size: 0.92rem;
+}
+
+.plan-body i {
+  margin-right: 8px;
+  color: #16a34a;
+}
+
+.plan-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 46px;
+  margin: 0 20px 20px;
+  color: #fff;
+  background: #2563eb;
+  border: 0;
+  border-radius: 10px;
+  font-weight: 800;
+}
+
+.plan-action.current-action {
+  background: #64748b;
+}
+
+@media (max-width: 1200px) {
+  .plans-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .page-heading,
+  .active-strip {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wallet-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .balance-panel,
+  .plans-grid {
+    grid-template-columns: 1fr;
+  }
+}

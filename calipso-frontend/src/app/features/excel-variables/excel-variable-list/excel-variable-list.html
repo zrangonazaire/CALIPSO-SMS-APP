@@ -1,0 +1,129 @@
+<div class="container-fluid">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="page-title mb-1">Variables Excel</h2>
+      <p class="text-muted mb-0">
+        Definissez les colonnes attendues dans le fichier Excel, dont la colonne destinataire SMS.
+      </p>
+    </div>
+
+    <button class="btn btn-atlas">
+      <i class="bi bi-download me-2"></i>
+      Telecharger modele Excel
+    </button>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <label class="form-label">Entreprise</label>
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadProfiles()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Profil d'import</label>
+      <select class="form-select" [(ngModel)]="profileId" (ngModelChange)="loadVariables()">
+        <option *ngFor="let profile of profiles" [ngValue]="profile.id">{{ profile.name }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card atlas-card">
+        <div class="card-body">
+          <h5 class="card-title fw-bold mb-3">
+            <i class="bi bi-plus-circle me-2"></i>
+            Nouvelle variable
+          </h5>
+
+          <div class="mb-3">
+            <label class="form-label">Code variable</label>
+            <input type="text" class="form-control" [(ngModel)]="form.code" placeholder="Ex: TELEPHONE">
+            <div class="form-text">Ce code doit correspondre a l'entete Excel.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Libelle</label>
+            <input type="text" class="form-control" [(ngModel)]="form.label" placeholder="Ex: Numero du destinataire">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Type de donnee</label>
+            <select class="form-select" [(ngModel)]="form.dataType">
+              <option *ngFor="let type of dataTypes" [value]="type">{{ type }}</option>
+            </select>
+          </div>
+
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="form.required" id="requiredSwitch">
+            <label class="form-check-label" for="requiredSwitch">Colonne obligatoire</label>
+          </div>
+
+          <div class="form-check form-switch mb-4">
+            <input class="form-check-input" type="checkbox" [(ngModel)]="form.phone" id="phoneSwitch">
+            <label class="form-check-label" for="phoneSwitch">Cette colonne est le destinataire SMS</label>
+            <div class="form-text">
+              Une campagne utilisera cette variable pour extraire les numeros depuis Excel.
+            </div>
+          </div>
+
+          <button class="btn btn-atlas w-100" (click)="createVariable()" [disabled]="!profileId">
+            <i class="bi bi-check2-circle me-2"></i>
+            Ajouter la variable
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      <div class="card atlas-card">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="card-title fw-bold mb-0">Liste des variables</h5>
+            <span class="badge badge-soft-primary rounded-pill px-3 py-2">{{ variables.length }} variable(s)</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Libelle</th>
+                  <th>Type</th>
+                  <th>Obligatoire</th>
+                  <th>Destinataire SMS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let variable of variables">
+                  <td><span class="fw-semibold">{{ variable.code }}</span></td>
+                  <td>{{ variable.label }}</td>
+                  <td><span class="badge badge-soft-primary">{{ variable.dataType }}</span></td>
+                  <td>
+                    <span class="badge" [ngClass]="variable.required ? 'badge-soft-success' : 'badge-soft-warning'">
+                      {{ variable.required ? 'Oui' : 'Non' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="variable.phone ? 'badge-soft-success' : 'badge-soft-danger'">
+                      {{ variable.phone ? 'Oui' : 'Non' }}
+                    </span>
+                  </td>
+                </tr>
+
+                <tr *ngIf="variables.length === 0">
+                  <td colspan="5" class="text-center text-muted py-4">
+                    Aucune variable creee pour le moment.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

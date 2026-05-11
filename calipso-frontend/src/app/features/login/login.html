@@ -1,0 +1,47 @@
+<main class="login-page">
+  <section class="login-visual">
+    <div class="brand-mark">
+      <i class="bi bi-chat-dots-fill"></i>
+    </div>
+    <h1>Calipso SMS</h1>
+    <p>Pilotage securise des entreprises, profils de campagne, credits et envois SMS.</p>
+  </section>
+
+  <section class="login-panel">
+    <form class="login-card" (ngSubmit)="setupMode ? setupAdmin() : submit()">
+      <span class="eyebrow">{{ setupMode ? 'Initialisation' : 'Connexion' }}</span>
+      <h2>{{ setupMode ? 'Premier administrateur' : 'Acces utilisateur' }}</h2>
+      <p>{{ setupMode ? 'Creez le premier compte securise de la plateforme.' : 'Connectez-vous avec le compte cree dans les parametres entreprise.' }}</p>
+
+      <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+      <ng-container *ngIf="setupMode">
+        <label class="form-label">Entreprise</label>
+        <input class="form-control" name="companyName" [(ngModel)]="setupForm.companyName" placeholder="Ex: PIGIER CI">
+
+        <label class="form-label mt-3">Nom complet</label>
+        <input class="form-control" name="fullName" [(ngModel)]="setupForm.fullName" placeholder="Administrateur principal">
+
+        <label class="form-label mt-3">Email</label>
+        <input class="form-control" name="email" type="email" [(ngModel)]="setupForm.email" placeholder="admin@societe.ci">
+      </ng-container>
+
+      <label class="form-label" [class.mt-3]="setupMode">Identifiant</label>
+      <input *ngIf="setupMode" class="form-control" name="setupUsername" autocomplete="username" [(ngModel)]="setupForm.username" placeholder="nom.utilisateur">
+      <input *ngIf="!setupMode" class="form-control" name="username" autocomplete="username" [(ngModel)]="form.username" placeholder="nom.utilisateur">
+
+      <label class="form-label mt-3">Mot de passe</label>
+      <input *ngIf="setupMode" class="form-control" name="setupPassword" type="password" autocomplete="new-password" [(ngModel)]="setupForm.password" placeholder="Votre mot de passe">
+      <input *ngIf="!setupMode" class="form-control" name="password" type="password" autocomplete="current-password" [(ngModel)]="form.password" placeholder="Votre mot de passe">
+
+      <button class="btn btn-atlas w-100 mt-4" type="submit" [disabled]="loading">
+        <i class="bi bi-shield-lock"></i>
+        {{ loading ? 'Traitement...' : (setupMode ? 'Creer et entrer' : 'Se connecter') }}
+      </button>
+
+      <button class="btn btn-link w-100 mt-2" type="button" (click)="setupMode = !setupMode; error = ''">
+        {{ setupMode ? 'J ai deja un compte' : 'Initialiser le premier administrateur' }}
+      </button>
+    </form>
+  </section>
+</main>

@@ -1,0 +1,31 @@
+<header class="bg-white border-bottom px-4 py-3 d-flex align-items-center justify-content-between">
+  <div>
+    <h5 class="mb-0 fw-bold">Espace administrateur</h5>
+    <small class="text-muted">Gestion des societes, credits SMS, imports Excel et campagnes</small>
+  </div>
+
+  <div class="d-flex align-items-center gap-3">
+    <a class="btn btn-sm btn-outline-primary" routerLink="/subscription">
+      <i class="bi bi-plus-circle me-1"></i>
+      Credits SMS
+    </a>
+    <a class="btn btn-sm btn-atlas" routerLink="/campaigns/create">
+      <i class="bi bi-send-plus me-1"></i>
+      Nouvelle campagne
+    </a>
+
+    <div class="text-end">
+      <div class="fw-semibold">{{ auth.currentUser()?.fullName || 'Utilisateur' }}</div>
+      <small class="text-muted">{{ auth.currentUser()?.role || '-' }} · {{ auth.currentUser()?.companyName || '-' }}</small>
+    </div>
+
+    <button
+      type="button"
+      class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center border-0"
+      style="width: 42px; height: 42px;"
+      title="Se deconnecter"
+      (click)="logout()">
+      <i class="bi bi-person-fill"></i>
+    </button>
+  </div>
+</header>

@@ -1,0 +1,81 @@
+<div class="subscription-page">
+  <div class="page-heading">
+    <div>
+      <h2 class="page-title mb-1">Souscription SMS</h2>
+      <p class="text-muted mb-0">Choisissez une formule adaptee au volume d'envoi de vos campagnes.</p>
+    </div>
+    <div class="wallet-actions">
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="syncSelectedCompanyBalance()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      </select>
+      <input class="form-control" type="number" min="1" [(ngModel)]="rechargeUnits">
+      <button class="btn btn-atlas" (click)="rechargeWallet()">
+        <i class="bi bi-wallet2 me-2"></i>
+        Crediter
+      </button>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+  <section class="balance-panel">
+    <div>
+      <span class="panel-label">Solde SMS</span>
+      <strong>{{ walletBalance | number:'1.0-0' }} SMS</strong>
+      <small>Disponible pour les campagnes et envois cibles.</small>
+    </div>
+    <div>
+      <span class="panel-label">Formule active</span>
+      <strong>{{ activePlan.name }}</strong>
+      <small>Active depuis le {{ activeSince }}</small>
+    </div>
+    <div>
+      <span class="panel-label">Unites disponibles</span>
+      <strong>{{ estimatedSms | number:'1.0-0' }}</strong>
+      <small>La facturation consomme une unite par segment SMS.</small>
+    </div>
+  </section>
+
+  <section class="active-strip">
+    <div>
+      <span>Souscription courante</span>
+      <strong>{{ activePlan.name }} - {{ activePlan.pricePerSms }} FCFA/SMS</strong>
+    </div>
+    <button class="btn btn-outline-light btn-sm" (click)="subscribe(plans[0])">
+      Revenir a Essentiel
+    </button>
+  </section>
+
+  <div class="section-title">Formules disponibles</div>
+
+  <section class="plans-grid">
+    <article class="plan-card" *ngFor="let plan of plans" [class.featured]="plan.recommended" [class.current]="plan.code === activePlanCode">
+      <div class="plan-header">
+        <span>{{ plan.name }}</span>
+        <em *ngIf="plan.recommended">Recommande</em>
+      </div>
+
+      <div class="plan-body">
+        <div class="price">
+          <strong>{{ plan.pricePerSms | number:'1.2-2' }}</strong>
+          <span>FCFA/SMS</span>
+        </div>
+        <p>{{ plan.audience }}</p>
+
+        <ul>
+          <li><i class="bi bi-check2"></i> Duree : {{ plan.durationDays }} jours</li>
+          <li *ngFor="let feature of plan.features"><i class="bi bi-check2"></i> {{ feature }}</li>
+        </ul>
+      </div>
+
+      <button
+        class="plan-action"
+        [class.current-action]="plan.code === activePlanCode"
+        (click)="subscribe(plan)">
+        <i class="bi" [ngClass]="plan.code === activePlanCode ? 'bi-check-circle' : 'bi-arrow-right-circle'"></i>
+        {{ plan.code === activePlanCode ? 'Formule active' : 'Souscrire / changer' }}
+      </button>
+    </article>
+  </section>
+</div>

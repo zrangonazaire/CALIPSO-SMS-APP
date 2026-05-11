@@ -1,0 +1,126 @@
+<div class="container-fluid dashboard-page">
+  <div class="dashboard-hero mb-4">
+    <div>
+      <span class="eyebrow">Centre de pilotage</span>
+      <h2 class="page-title mb-2">Campagnes SMS entreprises</h2>
+      <p class="text-muted mb-0">
+        Creez une societe, creditez son solde, importez les destinataires depuis Excel et envoyez vos campagnes.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a class="btn btn-atlas" routerLink="/campaigns/create">
+        <i class="bi bi-send-plus me-2"></i>
+        Nouvelle campagne
+      </a>
+      <a class="btn btn-outline-primary" routerLink="/manual-sms">
+        <i class="bi bi-chat-left-text me-2"></i>
+        Envoi cible
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="metric-card">
+        <div>
+          <span>Societes</span>
+          <strong>{{ companies.length }}</strong>
+        </div>
+        <i class="bi bi-buildings"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="metric-card">
+        <div>
+          <span>Solde total</span>
+          <strong>{{ totalSmsBalance | number:'1.0-0' }}</strong>
+        </div>
+        <i class="bi bi-wallet2"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="metric-card">
+        <div>
+          <span>Campagnes pretes</span>
+          <strong>{{ importedCampaigns }}</strong>
+        </div>
+        <i class="bi bi-upload"></i>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="metric-card">
+        <div>
+          <span>Campagnes envoyees</span>
+          <strong>{{ completedCampaigns }}</strong>
+        </div>
+        <i class="bi bi-send-check"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-5">
+      <div class="card atlas-card h-100">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">Parcours conseille</h5>
+          <div class="workflow-list">
+            <a *ngFor="let step of setupSteps; let index = index" [routerLink]="step.link" class="workflow-step">
+              <div class="step-index" [class.done]="step.done">
+                <i class="bi bi-check2" *ngIf="step.done"></i>
+                <span *ngIf="!step.done">{{ index + 1 }}</span>
+              </div>
+              <div>
+                <strong>{{ step.label }}</strong>
+                <span>{{ step.detail }}</span>
+              </div>
+              <i class="bi bi-chevron-right"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card atlas-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0">Dernieres campagnes</h5>
+            <a routerLink="/campaigns" class="btn btn-sm btn-outline-primary">Tout voir</a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Campagne</th>
+                  <th>Destinataires</th>
+                  <th>Statut</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let campaign of campaigns.slice(0, 5)">
+                  <td class="fw-semibold">{{ campaign.name }}</td>
+                  <td>{{ campaign.totalRecipients || 0 }}</td>
+                  <td><span class="badge badge-soft-primary">{{ campaign.status }}</span></td>
+                  <td>{{ campaign.createdAt | date:'dd/MM/yyyy' }}</td>
+                </tr>
+                <tr *ngIf="campaigns.length === 0">
+                  <td colspan="4" class="text-center text-muted py-4">
+                    Aucune campagne pour le moment. Creez votre premiere campagne.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

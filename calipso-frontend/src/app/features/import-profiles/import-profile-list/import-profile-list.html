@@ -1,0 +1,340 @@
+<div class="campaign-profile-page">
+  <header class="workspace-header">
+    <div>
+      <span class="eyebrow">Profil de Campagne</span>
+      <h2 class="page-title mb-1">Atelier de preparation SMS</h2>
+      <p class="text-muted mb-0">
+        Centralisez le format Excel, les variables d'entete et les contenus SMS avant le lancement des campagnes.
+      </p>
+    </div>
+
+    <div class="readiness-panel">
+      <span class="readiness-label">Pret pour envoi</span>
+      <strong>{{ readinessScore }}%</strong>
+      <div class="progress">
+        <div class="progress-bar" [style.width.%]="readinessScore"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+  <section class="control-strip">
+    <div>
+      <label class="form-label">Entreprise</label>
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadProfiles()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label">Profil actif</label>
+      <select class="form-select" [(ngModel)]="selectedProfileId" (ngModelChange)="loadProfileWorkspace()">
+        <option [ngValue]="0">Aucun profil selectionne</option>
+        <option *ngFor="let profile of profiles" [ngValue]="profile.id">{{ profile.name }}</option>
+      </select>
+    </div>
+
+    <div class="profile-summary">
+      <span>{{ variables.length }} entete(s)</span>
+      <span>{{ phoneVariables.length }} destinataire(s) SMS</span>
+      <span>{{ templates.length }} contenu(s)</span>
+    </div>
+  </section>
+
+  <nav class="builder-tabs" aria-label="Etapes profil de campagne">
+    <button type="button" [class.active]="activePanel === 'profile'" (click)="activePanel = 'profile'">
+      <i class="bi bi-folder-plus"></i>
+      Profil
+    </button>
+    <button type="button" [class.active]="activePanel === 'variables'" (click)="activePanel = 'variables'">
+      <i class="bi bi-braces"></i>
+      Entetes Excel
+    </button>
+    <button type="button" [class.active]="activePanel === 'message'" (click)="activePanel = 'message'">
+      <i class="bi bi-chat-square-text"></i>
+      SMS
+    </button>
+    <button type="button" [class.active]="activePanel === 'review'" (click)="activePanel = 'review'">
+      <i class="bi bi-check2-circle"></i>
+      Controle
+    </button>
+  </nav>
+
+  <section class="workspace-grid" *ngIf="activePanel === 'profile'">
+    <article class="atlas-card surface-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Nouveau profil</h5>
+          <p>Un profil regroupe les entetes Excel, le numero destinataire et les messages reutilisables.</p>
+        </div>
+        <i class="bi bi-diagram-3"></i>
+      </div>
+
+      <label class="form-label">Nom du profil</label>
+      <input class="form-control" [(ngModel)]="profileForm.name" placeholder="Ex: Relance scolarite mai">
+
+      <label class="form-label mt-3">Description operationnelle</label>
+      <textarea
+        class="form-control"
+        rows="4"
+        [(ngModel)]="profileForm.description"
+        placeholder="Canal, cible, contexte, regles d'import..."
+      ></textarea>
+
+      <button class="btn btn-atlas mt-4" (click)="createProfile()" [disabled]="!selectedCompanyId || !profileForm.name.trim()">
+        <i class="bi bi-plus-circle"></i>
+        Creer le profil
+      </button>
+    </article>
+
+    <article class="atlas-card surface-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Profils disponibles</h5>
+          <p>Selectionnez un profil pour enrichir sa structure d'envoi.</p>
+        </div>
+        <span class="metric">{{ profiles.length }}</span>
+      </div>
+
+      <div class="profile-list">
+        <button
+          type="button"
+          class="profile-row"
+          *ngFor="let profile of profiles"
+          [class.active]="profile.id === selectedProfileId"
+          (click)="selectedProfileId = profile.id || 0; loadProfileWorkspace()"
+        >
+          <span>
+            <strong>{{ profile.name }}</strong>
+            <small>{{ profile.description || 'Aucune description' }}</small>
+          </span>
+          <span class="badge" [ngClass]="profile.active ? 'badge-soft-success' : 'badge-soft-warning'">
+            {{ profile.active ? 'Actif' : 'Inactif' }}
+          </span>
+        </button>
+
+        <div class="empty-state" *ngIf="profiles.length === 0">
+          Aucun profil de campagne pour cette entreprise.
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="workspace-grid" *ngIf="activePanel === 'variables'">
+    <article class="atlas-card surface-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Variables d'entete Excel</h5>
+          <p>Declarez chaque colonne attendue dans le fichier importe.</p>
+        </div>
+        <i class="bi bi-table"></i>
+      </div>
+
+      <div class="phone-rule">
+        <i class="bi bi-telephone-fill"></i>
+        <div>
+          <strong>La variable destinataire SMS est obligatoire.</strong>
+          <span>
+            Cochez "Numero destinataire SMS" sur une seule colonne de type PHONE. Cette colonne sera utilisee pour lire les numeros dans Excel.
+          </span>
+        </div>
+      </div>
+
+      <div class="preset-grid">
+        <button type="button" *ngFor="let preset of variablePresets" (click)="usePreset(preset)">
+          {{ preset.label }}
+        </button>
+      </div>
+
+      <div class="form-grid mt-3">
+        <div>
+          <label class="form-label">Code variable</label>
+          <input class="form-control" [(ngModel)]="variableForm.code" placeholder="Ex: prenom">
+        </div>
+        <div>
+          <label class="form-label">Libelle</label>
+          <input class="form-control" [(ngModel)]="variableForm.label" placeholder="Ex: Prenom client">
+        </div>
+        <div>
+          <label class="form-label">Type</label>
+          <select class="form-select" [(ngModel)]="variableForm.dataType">
+            <option *ngFor="let type of dataTypes" [ngValue]="type">{{ type }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="option-row">
+        <label>
+          <input type="checkbox" [(ngModel)]="variableForm.required" [disabled]="variableForm.phone">
+          Obligatoire
+        </label>
+        <label>
+          <input type="checkbox" [(ngModel)]="variableForm.phone" (ngModelChange)="onPhoneVariableChange()">
+          Numero destinataire SMS
+        </label>
+      </div>
+
+      <button
+        class="btn btn-atlas mt-4"
+        (click)="createVariable()"
+        [disabled]="!selectedProfileId || !variableForm.code.trim() || !variableForm.label.trim()"
+      >
+        <i class="bi bi-plus-circle"></i>
+        Ajouter l'entete
+      </button>
+    </article>
+
+    <article class="atlas-card surface-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Dictionnaire du profil</h5>
+          <p>Ces variables pourront etre inserees dans le SMS avec la syntaxe {{ '{{code}}' }}.</p>
+        </div>
+        <span class="metric">{{ variables.length }}</span>
+      </div>
+
+      <div class="variable-list">
+        <div class="variable-row" *ngFor="let variable of variables" [class.phone-variable]="variable.phone">
+          <div>
+            <strong>{{ variable.code }}</strong>
+            <small>{{ variable.label }}</small>
+          </div>
+          <div class="variable-badges">
+            <span class="badge badge-soft-primary">{{ variable.dataType }}</span>
+            <span class="badge badge-soft-success" *ngIf="variable.required">Obligatoire</span>
+            <span class="badge badge-soft-danger" *ngIf="variable.phone">SMS</span>
+          </div>
+        </div>
+
+        <div class="empty-state" *ngIf="variables.length === 0">
+          Aucun entete declare. Commencez par le numero de telephone.
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="message-layout" *ngIf="activePanel === 'message'">
+    <article class="atlas-card surface-panel composer-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Contenu SMS</h5>
+          <p>Composez un message personnalise avec les variables du profil.</p>
+        </div>
+        <i class="bi bi-envelope-paper"></i>
+      </div>
+
+      <label class="form-label">Nom du modele</label>
+      <input class="form-control" [(ngModel)]="templateForm.name" placeholder="Ex: Relance paiement">
+
+      <label class="form-label mt-3">Message</label>
+      <textarea
+        class="form-control sms-editor"
+        rows="9"
+        [(ngModel)]="templateForm.content"
+        [placeholder]="'Bonjour {{PRENOM}}, votre message...'"
+      ></textarea>
+
+      <div class="sms-metrics">
+        <span>{{ smsLength }} caractere(s)</span>
+        <span>{{ smsSegments }} segment(s)</span>
+        <span [class.text-danger]="unknownTemplateVariables.length > 0">
+          {{ unknownTemplateVariables.length }} variable(s) inconnue(s)
+        </span>
+      </div>
+
+      <button
+        class="btn btn-atlas mt-3"
+        (click)="createTemplate()"
+        [disabled]="!selectedProfileId || !templateForm.name.trim() || !templateForm.content.trim()"
+      >
+        <i class="bi bi-save"></i>
+        Enregistrer le contenu SMS
+      </button>
+    </article>
+
+    <aside class="side-stack">
+      <article class="atlas-card surface-panel">
+        <div class="panel-heading compact">
+          <div>
+            <h5>Insertion rapide</h5>
+            <p>Cliquez pour ajouter une variable au message.</p>
+          </div>
+        </div>
+
+        <div class="token-list">
+          <button type="button" *ngFor="let variable of variables" (click)="insertVariable(variable)">
+            {{ '{{' + variable.code + '}}' }}
+          </button>
+          <div class="empty-state" *ngIf="variables.length === 0">Aucune variable disponible.</div>
+        </div>
+      </article>
+
+      <article class="atlas-card surface-panel">
+        <div class="panel-heading compact">
+          <div>
+            <h5>Apercu personnalise</h5>
+            <p>Simulation avec des valeurs exemples.</p>
+          </div>
+        </div>
+        <div class="phone-preview">
+          {{ previewMessage || 'Votre SMS apparaitra ici.' }}
+        </div>
+      </article>
+    </aside>
+  </section>
+
+  <section class="workspace-grid" *ngIf="activePanel === 'review'">
+    <article class="atlas-card surface-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Controle avant campagne</h5>
+          <p>Validez les points critiques avant l'import des destinataires.</p>
+        </div>
+        <span class="metric">{{ readinessScore }}%</span>
+      </div>
+
+      <div class="check-list">
+        <div [class.done]="selectedProfileId">
+          <i class="bi" [ngClass]="selectedProfileId ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+          Profil selectionne
+        </div>
+        <div [class.done]="variables.length > 0">
+          <i class="bi" [ngClass]="variables.length > 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+          Variables d'entete declarees
+        </div>
+        <div [class.done]="phoneVariables.length > 0">
+          <i class="bi" [ngClass]="phoneVariables.length > 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+          Colonne telephone marquee comme destinataire SMS
+        </div>
+        <div [class.done]="templates.length > 0">
+          <i class="bi" [ngClass]="templates.length > 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+          Au moins un contenu SMS enregistre
+        </div>
+        <div [class.done]="unknownTemplateVariables.length === 0">
+          <i class="bi" [ngClass]="unknownTemplateVariables.length === 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
+          Toutes les variables du message existent dans les entetes
+        </div>
+      </div>
+    </article>
+
+    <article class="atlas-card surface-panel">
+      <div class="panel-heading">
+        <div>
+          <h5>Contenus disponibles</h5>
+          <p>Reprenez un contenu existant pour l'ameliorer ou le dupliquer.</p>
+        </div>
+        <span class="metric">{{ templates.length }}</span>
+      </div>
+
+      <div class="template-list">
+        <button type="button" *ngFor="let template of templates" (click)="editTemplate(template)">
+          <strong>{{ template.name }}</strong>
+          <small>{{ template.content }}</small>
+        </button>
+        <div class="empty-state" *ngIf="templates.length === 0">Aucun contenu SMS enregistre.</div>
+      </div>
+    </article>
+  </section>
+</div>

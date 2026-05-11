@@ -1,0 +1,223 @@
+<div class="container-fluid company-page">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="page-title mb-1">Comptes entreprise</h2>
+      <p class="text-muted mb-0">Creez les societes clientes, leurs utilisateurs et leurs profils de travail.</p>
+    </div>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+
+  <div class="row g-4">
+    <div class="col-xl-4">
+      <div class="card atlas-card mb-4">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">Nouvelle societe</h5>
+
+          <label class="form-label">Raison sociale</label>
+          <input class="form-control mb-3" [(ngModel)]="form.name" placeholder="Ex: PIGIER CI">
+
+          <label class="form-label">Contact principal</label>
+          <input class="form-control mb-3" [(ngModel)]="form.contactName" placeholder="Nom du responsable">
+
+          <label class="form-label">Email</label>
+          <input class="form-control mb-3" [(ngModel)]="form.email" type="email" placeholder="contact@societe.ci">
+
+          <label class="form-label">Telephone</label>
+          <input class="form-control mb-3" [(ngModel)]="form.phone" placeholder="+225...">
+
+          <label class="form-label">Numero d'envoi SMS</label>
+          <input class="form-control mb-3" [(ngModel)]="form.senderPhone" placeholder="+225...">
+
+          <label class="form-label">Secteur d'activite</label>
+          <input class="form-control mb-3" [(ngModel)]="form.businessType" placeholder="Education, commerce, banque...">
+
+          <label class="form-label">Adresse</label>
+          <textarea class="form-control mb-4" rows="2" [(ngModel)]="form.address"></textarea>
+
+          <button class="btn btn-atlas w-100" (click)="createCompany()">Creer le compte</button>
+        </div>
+      </div>
+
+      <div class="card atlas-card">
+        <div class="card-body">
+          <h5 class="fw-bold mb-3">Societes clientes</h5>
+
+          <div class="company-list">
+            <button
+              type="button"
+              class="company-item"
+              *ngFor="let company of companies"
+              [class.active]="company.id === selectedCompanyId"
+              (click)="selectedCompanyId = company.id || 0; loadCompanyContext()">
+              <div>
+                <strong>{{ company.name }}</strong>
+                <span>{{ company.contactName || company.email || 'Compte client' }}</span>
+              </div>
+              <em>{{ company.smsBalance || 0 }} SMS</em>
+            </button>
+          </div>
+
+          <div class="text-center text-muted py-4" *ngIf="!loading && companies.length === 0">
+            Aucune societe creee.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8">
+      <div class="account-summary" *ngIf="selectedCompany as company">
+        <div>
+          <span>Compte selectionne</span>
+          <strong>{{ company.name }}</strong>
+          <small>{{ company.businessType || 'Secteur non renseigne' }}</small>
+        </div>
+        <div>
+          <span>Responsable</span>
+          <strong>{{ company.contactName || '-' }}</strong>
+          <small>{{ company.email || '-' }}</small>
+        </div>
+        <div>
+          <span>Solde SMS</span>
+          <strong>{{ company.smsBalance || 0 }}</strong>
+          <small>Envoi: {{ company.senderPhone || 'numero non defini' }}</small>
+        </div>
+      </div>
+
+      <div class="card atlas-card">
+        <div class="card-body">
+          <div class="tabs-bar">
+            <button [class.active]="activeTab === 'company'" (click)="activeTab = 'company'">Informations</button>
+            <button [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">Utilisateurs</button>
+            <button [class.active]="activeTab === 'profiles'" (click)="activeTab = 'profiles'">Profils Excel</button>
+          </div>
+
+          <section *ngIf="activeTab === 'company' && selectedCompany as company">
+            <div class="details-grid">
+              <div><span>Raison sociale</span><strong>{{ company.name }}</strong></div>
+              <div><span>Email</span><strong>{{ company.email || '-' }}</strong></div>
+              <div><span>Telephone</span><strong>{{ company.phone || '-' }}</strong></div>
+              <div class="sender-setting" [class.missing]="!company.senderPhone">
+                <span>Numero d'envoi SMS</span>
+                <strong>{{ company.senderPhone || 'A definir avant les envois' }}</strong>
+              </div>
+              <div><span>Adresse</span><strong>{{ company.address || '-' }}</strong></div>
+              <div><span>Statut</span><strong>{{ company.active ? 'Actif' : 'Inactif' }}</strong></div>
+              <div><span>Date creation</span><strong>{{ company.createdAt | date:'dd/MM/yyyy' }}</strong></div>
+            </div>
+
+            <div class="settings-form mt-4">
+              <h5 class="fw-bold mb-3">Parametres entreprise</h5>
+              <div class="settings-grid">
+                <div>
+                  <label class="form-label">Raison sociale</label>
+                  <input class="form-control" [(ngModel)]="settingsForm.name">
+                </div>
+                <div>
+                  <label class="form-label">Email</label>
+                  <input class="form-control" type="email" [(ngModel)]="settingsForm.email">
+                </div>
+                <div>
+                  <label class="form-label">Telephone contact</label>
+                  <input class="form-control" [(ngModel)]="settingsForm.phone">
+                </div>
+                <div>
+                  <label class="form-label">Numero d'envoi SMS</label>
+                  <input class="form-control" [(ngModel)]="settingsForm.senderPhone" placeholder="+2250700000000">
+                </div>
+              </div>
+
+              <label class="form-label mt-3">Adresse</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="settingsForm.address"></textarea>
+
+              <button class="btn btn-atlas mt-3" (click)="updateCompanySettings()" [disabled]="!settingsForm.name.trim()">
+                Enregistrer les parametres
+              </button>
+            </div>
+          </section>
+
+          <section *ngIf="activeTab === 'users'">
+            <div class="row g-4">
+              <div class="col-lg-5">
+                <h5 class="fw-bold mb-3">Nouvel utilisateur</h5>
+                <label class="form-label">Nom complet</label>
+                <input class="form-control mb-3" [(ngModel)]="userForm.fullName">
+
+                <label class="form-label">Identifiant</label>
+                <input class="form-control mb-3" [(ngModel)]="userForm.username">
+
+                <label class="form-label">Email</label>
+                <input class="form-control mb-3" type="email" [(ngModel)]="userForm.email">
+
+                <label class="form-label">Mot de passe initial</label>
+                <input class="form-control mb-3" type="password" [(ngModel)]="userForm.password" autocomplete="new-password">
+
+                <label class="form-label">Telephone</label>
+                <input class="form-control mb-3" [(ngModel)]="userForm.phone">
+
+                <label class="form-label">Role</label>
+                <select class="form-select mb-4" [(ngModel)]="userForm.role">
+                  <option *ngFor="let role of roles" [ngValue]="role">{{ role }}</option>
+                </select>
+
+                <button
+                  class="btn btn-atlas w-100"
+                  (click)="createUser()"
+                  [disabled]="!selectedCompanyId || !userForm.password">
+                  Ajouter l'utilisateur
+                </button>
+              </div>
+
+              <div class="col-lg-7">
+                <h5 class="fw-bold mb-3">Utilisateurs du compte</h5>
+                <div class="table-responsive">
+                  <table class="table align-middle">
+                    <thead><tr><th>Nom</th><th>Identifiant</th><th>Role</th><th>Statut</th><th></th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let user of users">
+                        <td class="fw-semibold">{{ user.fullName }}</td>
+                        <td>{{ user.username }}</td>
+                        <td><span class="badge badge-soft-primary">{{ user.role }}</span></td>
+                        <td>{{ user.active ? 'Actif' : 'Suspendu' }}</td>
+                        <td>
+                          <button class="btn btn-sm btn-outline-primary" (click)="toggleUser(user)">
+                            {{ user.active ? 'Suspendre' : 'Activer' }}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="users.length === 0">
+                        <td colspan="5" class="text-center text-muted py-4">Aucun utilisateur.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section *ngIf="activeTab === 'profiles'">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h5 class="fw-bold mb-0">Profils Excel rattaches</h5>
+              <a class="btn btn-sm btn-atlas" routerLink="/import-profiles">Gerer les profils</a>
+            </div>
+
+            <table class="table align-middle">
+              <thead><tr><th>Nom</th><th>Description</th><th>Statut</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let profile of profiles">
+                  <td class="fw-semibold">{{ profile.name }}</td>
+                  <td>{{ profile.description || '-' }}</td>
+                  <td><span class="badge badge-soft-success">{{ profile.active ? 'Actif' : 'Inactif' }}</span></td>
+                </tr>
+                <tr *ngIf="profiles.length === 0">
+                  <td colspan="3" class="text-center text-muted py-4">Aucun profil pour cette societe.</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,113 @@
+.dashboard-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.eyebrow {
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 120px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.metric-card span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.metric-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #172554;
+  font-size: 2rem;
+}
+
+.metric-card i {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  color: #2563eb;
+  background: #dbeafe;
+  border-radius: 14px;
+  font-size: 1.35rem;
+}
+
+.workflow-list {
+  display: grid;
+  gap: 10px;
+}
+
+.workflow-step {
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  color: inherit;
+  text-decoration: none;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.workflow-step:hover {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.workflow-step strong,
+.workflow-step span {
+  display: block;
+}
+
+.workflow-step span {
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.step-index {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: #2563eb;
+  background: #dbeafe;
+  border-radius: 12px;
+}
+
+.step-index.done {
+  color: #166534;
+  background: #dcfce7;
+}
+
+@media (max-width: 768px) {
+  .dashboard-hero,
+  .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

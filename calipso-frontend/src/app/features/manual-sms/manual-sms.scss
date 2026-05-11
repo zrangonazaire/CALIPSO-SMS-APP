@@ -1,0 +1,16 @@
+.metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.metric-row span {
+  color: #64748b;
+}
+
+.metric-row strong {
+  color: #172554;
+  font-size: 1.2rem;
+}
