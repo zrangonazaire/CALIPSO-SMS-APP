@@ -63,7 +63,13 @@ export class Dashboard implements OnInit {
         done: this.totalSmsBalance > 0,
       },
       {
-        label: 'Configurer le fichier Excel',
+        label: 'Creer un profil de campagne',
+        detail: 'Regroupez le format Excel, les variables et les contenus SMS.',
+        link: '/import-profiles',
+        done: false,
+      },
+      {
+        label: 'Configurer les colonnes Excel',
         detail: 'Declarez les colonnes, dont la variable destinataire SMS.',
         link: '/excel-variables',
         done: false,

@@ -7,9 +7,9 @@ spring:
     name: calipso
 
   datasource:
-    url: jdbc:postgresql://postgres:5432/calpso_sms_db
-    username: calipso_user
-    password: calipso_password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/calpso_sms_db}
+    username: ${SPRING_DATASOURCE_USERNAME:calipso_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:calipso_password}
 
   jpa:
     hibernate:

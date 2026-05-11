@@ -10,6 +10,7 @@ import { CampaignCreate } from './features/campaigns/campaign-create/campaign-cr
 import { RecipientList } from './features/recipient-list/recipient-list';
 import { Subscription } from './features/subscription/subscription';
 import { ManualSms } from './features/manual-sms/manual-sms';
+import { SmsHistory } from './features/sms-history/sms-history';
 import { Login } from './features/login/login';
 import { authGuard } from './core/auth/auth.guard';
 
@@ -27,6 +28,7 @@ export const routes: Routes = [
       { path: 'excel-variables', component: ExcelVariableList },
       { path: 'sms-templates', component: SmsTemplateList },
       { path: 'manual-sms', component: ManualSms },
+      { path: 'sms-history', component: SmsHistory },
       { path: 'campaigns', component: CampaignList },
       { path: 'campaigns/create', component: CampaignCreate },
       { path: 'recipients', component: RecipientList },

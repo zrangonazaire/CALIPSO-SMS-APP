@@ -19,4 +19,8 @@ export class ExcelVariableService {
   create(variable: ExcelVariable): Observable<ExcelVariable> {
     return this.http.post<ExcelVariable>(this.apiUrl, variable);
   }
+
+  delete(variableId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${variableId}`);
+  }
 }

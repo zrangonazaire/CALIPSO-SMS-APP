@@ -15,6 +15,7 @@ public class ManualSmsController {
 
     private final CompanyRepository companyRepository;
     private final SmsMessageService smsMessageService;
+    private final SmsSendHistoryRepository historyRepository;
 
     @PostMapping("/send")
     public ManualSmsResponse send(@RequestBody @Valid ManualSmsRequest request) {
@@ -37,6 +38,14 @@ public class ManualSmsController {
         company.setSmsBalance(currentBalance - totalSegments);
         companyRepository.save(company);
 
+        validNumbers.forEach(phoneNumber -> historyRepository.save(SmsSendHistory.builder()
+                .company(company)
+                .source(SmsSendSource.MANUAL)
+                .phoneNumber(normalizePhone(phoneNumber))
+                .message(request.message())
+                .segmentCount(segmentsPerRecipient)
+                .build()));
+
         return new ManualSmsResponse(
                 phoneNumbers.size(),
                 validNumbers.size(),
@@ -44,5 +53,26 @@ public class ManualSmsController {
                 totalSegments,
                 company.getSmsBalance()
         );
+    }
+
+    private String normalizePhone(String phone) {
+        String cleaned = phone.replace(" ", "")
+                .replace("-", "")
+                .replace(".", "")
+                .trim();
+
+        if (cleaned.startsWith("+")) {
+            return cleaned;
+        }
+
+        if (cleaned.startsWith("225")) {
+            return "+" + cleaned;
+        }
+
+        if (cleaned.startsWith("01") || cleaned.startsWith("05") || cleaned.startsWith("07")) {
+            return "+225" + cleaned;
+        }
+
+        return cleaned;
     }
 }

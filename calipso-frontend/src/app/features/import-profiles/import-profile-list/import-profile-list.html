@@ -205,6 +205,15 @@
             <span class="badge badge-soft-primary">{{ variable.dataType }}</span>
             <span class="badge badge-soft-success" *ngIf="variable.required">Obligatoire</span>
             <span class="badge badge-soft-danger" *ngIf="variable.phone">SMS</span>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger icon-action"
+              title="Supprimer la variable"
+              aria-label="Supprimer la variable"
+              (click)="deleteVariable(variable)"
+            >
+              <i class="bi bi-trash"></i>
+            </button>
           </div>
         </div>
 

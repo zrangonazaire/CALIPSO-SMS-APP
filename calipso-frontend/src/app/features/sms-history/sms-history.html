@@ -1,0 +1,90 @@
+<div class="container-fluid history-page">
+  <header class="history-header">
+    <div>
+      <span class="eyebrow">Historique SMS</span>
+      <h2 class="page-title mb-1">Journal des envois</h2>
+      <p class="text-muted mb-0">Consultez les SMS envoyes par campagne et par envoi cible.</p>
+    </div>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <section class="history-toolbar">
+    <div>
+      <label class="form-label">Entreprise</label>
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadHistory()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label">Type</label>
+      <select class="form-select" [(ngModel)]="sourceFilter">
+        <option value="ALL">Tous les envois</option>
+        <option value="CAMPAIGN">Campagnes</option>
+        <option value="MANUAL">Envois cibles</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label">Statut</label>
+      <select class="form-select" [(ngModel)]="statusFilter">
+        <option value="ALL">Tous les statuts</option>
+        <option *ngFor="let status of statuses" [value]="status">{{ statusLabel(status) }}</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="form-label">Recherche</label>
+      <input class="form-control" [(ngModel)]="search" placeholder="Numero, campagne, contenu...">
+    </div>
+  </section>
+
+  <section class="metric-grid">
+    <article class="metric-card">
+      <span>Envois affiches</span>
+      <strong>{{ filteredHistory.length }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Campagnes</span>
+      <strong>{{ campaignCount }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Envois cibles</span>
+      <strong>{{ manualCount }}</strong>
+    </article>
+    <article class="metric-card">
+      <span>Segments consommes</span>
+      <strong>{{ totalSegments }}</strong>
+    </article>
+  </section>
+
+  <section class="history-list atlas-card">
+    <div class="list-head">
+      <h5>Details des SMS</h5>
+      <span *ngIf="loading">Chargement...</span>
+    </div>
+
+    <div class="history-row" *ngFor="let item of filteredHistory">
+      <div class="history-main">
+        <div class="history-topline">
+          <strong>{{ item.phoneNumber }}</strong>
+          <span class="badge" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
+          <span class="badge badge-soft-primary">{{ sourceLabel(item.source) }}</span>
+        </div>
+        <p>{{ item.message }}</p>
+        <small>
+          {{ item.campaignName || 'Envoi sans campagne' }} · {{ item.sentAt | date:'dd/MM/yyyy HH:mm' }}
+        </small>
+      </div>
+      <div class="segment-box">
+        <strong>{{ item.segmentCount }}</strong>
+        <span>segment(s)</span>
+      </div>
+    </div>
+
+    <div class="empty-state" *ngIf="!loading && filteredHistory.length === 0">
+      Aucun historique SMS pour les filtres selectionnes.
+    </div>
+  </section>
+</div>

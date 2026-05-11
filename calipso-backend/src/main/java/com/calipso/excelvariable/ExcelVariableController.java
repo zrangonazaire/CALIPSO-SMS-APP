@@ -54,6 +54,15 @@ public class ExcelVariableController {
         return variableRepository.findByProfileIdAndActiveTrue(profileId);
     }
 
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Long id) {
+        ExcelVariable variable = variableRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Variable introuvable"));
+
+        variable.setActive(false);
+        variableRepository.save(variable);
+    }
+
     private String normalizeCode(String code) {
         return code.trim()
                 .toUpperCase()

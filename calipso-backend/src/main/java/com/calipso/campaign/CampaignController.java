@@ -14,6 +14,9 @@ import com.calipso.recipient.CampaignRecipientRepository;
 import com.calipso.recipient.RecipientStatus;
 import com.calipso.smstemplate.SmsTemplate;
 import com.calipso.smstemplate.SmsTemplateRepository;
+import com.calipso.sms.SmsSendHistory;
+import com.calipso.sms.SmsSendHistoryRepository;
+import com.calipso.sms.SmsSendSource;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +31,7 @@ public class CampaignController {
     private final SmsTemplateRepository templateRepository;
     private final ExcelVariableRepository variableRepository;
     private final CampaignRecipientRepository recipientRepository;
+    private final SmsSendHistoryRepository historyRepository;
 
     @PostMapping
     public Campaign create(@RequestBody @Valid CreateCampaignRequest request) {
@@ -96,6 +100,17 @@ public class CampaignController {
             recipient.setStatus(RecipientStatus.SENT);
             recipient.setSentAt(LocalDateTime.now());
             recipientRepository.save(recipient);
+
+            historyRepository.save(SmsSendHistory.builder()
+                    .company(campaign.getCompany())
+                    .campaign(campaign)
+                    .source(SmsSendSource.CAMPAIGN)
+                    .phoneNumber(recipient.getPhoneNumber())
+                    .message(recipient.getGeneratedMessage())
+                    .segmentCount(recipient.getSegmentCount())
+                    .status(RecipientStatus.SENT)
+                    .sentAt(recipient.getSentAt())
+                    .build());
         }
 
         campaign.getCompany().setSmsBalance(balance - totalSegments);

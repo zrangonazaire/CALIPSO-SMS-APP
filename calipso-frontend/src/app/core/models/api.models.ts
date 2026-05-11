@@ -110,3 +110,20 @@ export interface ManualSmsResponse {
   totalSegments: number;
   remainingSmsBalance: number;
 }
+
+export type SmsSendSource = 'CAMPAIGN' | 'MANUAL';
+
+export interface SmsSendHistory {
+  id: number;
+  companyId: number;
+  companyName: string;
+  campaignId?: number;
+  campaignName?: string;
+  source: SmsSendSource;
+  phoneNumber: string;
+  message: string;
+  segmentCount: number;
+  status: string;
+  errorMessage?: string;
+  sentAt: string;
+}

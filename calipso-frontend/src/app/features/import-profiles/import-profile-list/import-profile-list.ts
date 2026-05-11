@@ -207,6 +207,27 @@ export class ImportProfileList implements OnInit {
     });
   }
 
+  deleteVariable(variable: ExcelVariable): void {
+    if (!variable.id) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Supprimer la variable ${variable.code} de ce profil ?`);
+    if (!confirmed) {
+      return;
+    }
+
+    this.error = '';
+    this.success = '';
+    this.variableService.delete(variable.id).subscribe({
+      next: () => {
+        this.success = 'Variable supprimee du profil.';
+        this.loadVariables();
+      },
+      error: () => this.error = 'Impossible de supprimer la variable.',
+    });
+  }
+
   usePreset(preset: Pick<ExcelVariable, 'code' | 'label' | 'dataType' | 'required' | 'phone'>): void {
     this.variableForm = {
       profileId: this.selectedProfileId,

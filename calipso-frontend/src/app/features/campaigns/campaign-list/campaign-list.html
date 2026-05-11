@@ -1,47 +1,143 @@
-<div class="container-fluid">
-  <div class="d-flex align-items-center justify-content-between mb-4">
+<div class="container-fluid campaign-page">
+  <div class="campaign-header">
     <div>
+      <span class="eyebrow">Pilotage des envois</span>
       <h2 class="page-title mb-1">Campagnes</h2>
-      <p class="text-muted mb-0">Suivi des campagnes SMS par entreprise.</p>
+      <p class="text-muted mb-0">Importez les destinataires, controlez les SMS generes, puis lancez l'envoi.</p>
     </div>
-    <a class="btn btn-atlas" routerLink="/campaigns/create">Nouvelle campagne</a>
+    <a class="btn btn-atlas" routerLink="/campaigns/create">
+      <i class="bi bi-plus-circle"></i>
+      Nouvelle campagne
+    </a>
   </div>
 
   <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
   <div class="alert alert-success" *ngIf="success">{{ success }}</div>
 
-  <label class="form-label">Entreprise</label>
-  <select class="form-select mb-4" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadCampaigns()">
-    <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
-  </select>
-
-  <div class="card atlas-card">
-    <div class="card-body">
-      <table class="table align-middle">
-        <thead><tr><th>Nom</th><th>Profil</th><th>Modele</th><th>Statut</th><th>Destinataires</th><th>Date</th><th>Actions</th></tr></thead>
-        <tbody>
-          <tr *ngFor="let campaign of campaigns">
-            <td class="fw-semibold">{{ campaign.name }}</td>
-            <td>{{ campaign.profile?.name || '-' }}</td>
-            <td>{{ campaign.template?.name || '-' }}</td>
-            <td><span class="badge badge-soft-primary">{{ campaign.status }}</span></td>
-            <td>{{ campaign.totalRecipients || 0 }}</td>
-            <td>{{ campaign.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
-            <td>
-              <div class="d-flex flex-wrap gap-2">
-                <label class="btn btn-sm btn-outline-primary mb-0">
-                  Importer Excel
-                  <input class="d-none" type="file" accept=".xlsx,.xls" (change)="importExcel(campaign, $event)">
-                </label>
-                <button class="btn btn-sm btn-atlas" (click)="sendCampaign(campaign)" [disabled]="campaign.status !== 'IMPORTED'">
-                  Envoyer
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr *ngIf="campaigns.length === 0"><td colspan="7" class="text-center text-muted py-4">Aucune campagne.</td></tr>
-        </tbody>
-      </table>
+  <section class="campaign-toolbar">
+    <div>
+      <label class="form-label">Entreprise</label>
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadCampaigns()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      </select>
     </div>
-  </div>
+    <div class="toolbar-metrics">
+      <span>{{ campaigns.length }} campagne(s)</span>
+      <span>{{ selectedCampaignRecipients }} destinataire(s)</span>
+      <span>{{ totalSegments }} segment(s)</span>
+    </div>
+  </section>
+
+  <section class="campaign-layout">
+    <aside class="campaign-list-panel atlas-card">
+      <div class="panel-heading">
+        <div>
+          <h5>Campagnes</h5>
+          <p>Selectionnez une campagne pour consulter son import.</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="campaign-row"
+        *ngFor="let campaign of campaigns"
+        [class.active]="campaign.id === selectedCampaign?.id"
+        (click)="selectCampaign(campaign)"
+      >
+        <span>
+          <strong>{{ campaign.name }}</strong>
+          <small>{{ campaign.profile?.name || '-' }} · {{ campaign.template?.name || '-' }}</small>
+        </span>
+        <span class="badge" [ngClass]="statusClass(campaign.status)">{{ statusLabel(campaign.status) }}</span>
+      </button>
+
+      <div class="empty-state" *ngIf="campaigns.length === 0">Aucune campagne pour cette entreprise.</div>
+    </aside>
+
+    <main class="campaign-detail" *ngIf="selectedCampaign as campaign">
+      <section class="detail-top atlas-card">
+        <div>
+          <span class="eyebrow">Campagne active</span>
+          <h3>{{ campaign.name }}</h3>
+          <p>{{ campaign.description || 'Aucune description renseignee.' }}</p>
+        </div>
+        <div class="detail-actions">
+          <label class="btn btn-outline-primary mb-0">
+            <i class="bi bi-file-earmark-spreadsheet"></i>
+            Importer Excel
+            <input class="d-none" type="file" accept=".xlsx,.xls" (change)="importExcel(campaign, $event)">
+          </label>
+          <button class="btn btn-atlas" (click)="sendCampaign(campaign)" [disabled]="campaign.status !== 'IMPORTED'">
+            <i class="bi bi-send"></i>
+            Envoyer
+          </button>
+        </div>
+      </section>
+
+      <section class="metric-grid">
+        <article class="metric-card">
+          <span>Total</span>
+          <strong>{{ selectedCampaignRecipients }}</strong>
+          <small>lignes importees</small>
+        </article>
+        <article class="metric-card">
+          <span>Valides</span>
+          <strong>{{ campaign.totalValid || validRecipients }}</strong>
+          <small>prets a envoyer</small>
+        </article>
+        <article class="metric-card">
+          <span>Invalides</span>
+          <strong>{{ campaign.totalInvalid || invalidRecipients }}</strong>
+          <small>a corriger dans Excel</small>
+        </article>
+        <article class="metric-card">
+          <span>SMS</span>
+          <strong>{{ totalSegments }}</strong>
+          <small>segments estimes</small>
+        </article>
+      </section>
+
+      <section class="preview-panel atlas-card">
+        <div class="panel-heading">
+          <div>
+            <h5>Apercu apres import</h5>
+            <p>Controlez les numeros, les donnees Excel et le contenu SMS personnalise avant l'envoi.</p>
+          </div>
+          <span class="badge" [ngClass]="statusClass(campaign.status)">{{ statusLabel(campaign.status) }}</span>
+        </div>
+
+        <div class="empty-state" *ngIf="previewLoading">Chargement de l apercu...</div>
+        <div class="empty-state" *ngIf="!previewLoading && recipients.length === 0">
+          Aucun fichier importe pour cette campagne. Importez un Excel pour voir les contenus generes.
+        </div>
+
+        <div class="recipient-preview" *ngIf="!previewLoading && recipients.length > 0">
+          <article class="recipient-card" *ngFor="let recipient of recipients.slice(0, 20)">
+            <div class="recipient-head">
+              <div>
+                <strong>{{ recipient.phoneNumber || 'Numero absent' }}</strong>
+                <small>{{ recipient.segmentCount || 0 }} segment(s)</small>
+              </div>
+              <span class="badge" [ngClass]="statusClass(recipient.status)">{{ statusLabel(recipient.status) }}</span>
+            </div>
+
+            <div class="message-preview" [class.invalid]="recipient.status === 'INVALID'">
+              {{ recipient.generatedMessage || recipient.errorMessage || 'Message non genere.' }}
+            </div>
+
+            <div class="raw-grid" *ngIf="previewColumns.length > 0">
+              <div *ngFor="let column of previewColumns">
+                <span>{{ column }}</span>
+                <strong>{{ recipient.rawData?.[column] || '-' }}</strong>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <div class="preview-limit" *ngIf="recipients.length > 20">
+          Apercu limite aux 20 premiers destinataires sur {{ recipients.length }}.
+        </div>
+      </section>
+    </main>
+  </section>
 </div>
