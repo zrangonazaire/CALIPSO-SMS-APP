@@ -5,11 +5,11 @@
       <p class="text-muted mb-0">Choisissez une formule adaptee au volume d'envoi de vos campagnes.</p>
     </div>
     <div class="wallet-actions">
-      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="syncSelectedCompanyBalance()">
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadSelectedCompanySubscription()">
         <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
       </select>
       <input class="form-control" type="number" min="1" [(ngModel)]="rechargeUnits">
-      <button class="btn btn-atlas" (click)="rechargeWallet()">
+      <button class="btn btn-atlas" (click)="rechargeWallet()" [disabled]="loading || !activeSubscription">
         <i class="bi bi-wallet2 me-2"></i>
         Crediter
       </button>
@@ -27,8 +27,9 @@
     </div>
     <div>
       <span class="panel-label">Formule active</span>
-      <strong>{{ activePlan.name }}</strong>
-      <small>Active depuis le {{ activeSince }}</small>
+      <strong>{{ activeSubscription?.planName || 'Aucune' }}</strong>
+      <small *ngIf="activeSubscription">Expire le {{ activeSubscription.expiresAt | date:'dd/MM/yyyy' }}</small>
+      <small *ngIf="!activeSubscription">Souscrivez a une formule pour recharger.</small>
     </div>
     <div>
       <span class="panel-label">Unites disponibles</span>
@@ -40,20 +41,21 @@
   <section class="active-strip">
     <div>
       <span>Souscription courante</span>
-      <strong>{{ activePlan.name }} - {{ activePlan.pricePerSms }} FCFA/SMS</strong>
+      <strong *ngIf="activeSubscription">{{ activeSubscription.planName }} - {{ activeSubscription.pricePerSms }} FCFA/SMS</strong>
+      <strong *ngIf="!activeSubscription">Aucune souscription active</strong>
     </div>
-    <button class="btn btn-outline-light btn-sm" (click)="subscribe(plans[0])">
-      Revenir a Essentiel
+    <button class="btn btn-outline-light btn-sm" *ngIf="plans.length" (click)="subscribe(plans[0])" [disabled]="loading">
+      Souscrire a Essentiel
     </button>
   </section>
 
   <div class="section-title">Formules disponibles</div>
 
   <section class="plans-grid">
-    <article class="plan-card" *ngFor="let plan of plans" [class.featured]="plan.recommended" [class.current]="plan.code === activePlanCode">
+    <article class="plan-card" *ngFor="let plan of plans" [class.featured]="plan.code === 'AVANCE'" [class.current]="isCurrentPlan(plan)">
       <div class="plan-header">
         <span>{{ plan.name }}</span>
-        <em *ngIf="plan.recommended">Recommande</em>
+        <em *ngIf="plan.code === 'AVANCE'">Recommande</em>
       </div>
 
       <div class="plan-body">
@@ -61,21 +63,49 @@
           <strong>{{ plan.pricePerSms | number:'1.2-2' }}</strong>
           <span>FCFA/SMS</span>
         </div>
-        <p>{{ plan.audience }}</p>
+        <p>{{ planAudience(plan) }}</p>
 
         <ul>
           <li><i class="bi bi-check2"></i> Duree : {{ plan.durationDays }} jours</li>
-          <li *ngFor="let feature of plan.features"><i class="bi bi-check2"></i> {{ feature }}</li>
+          <li><i class="bi bi-check2"></i> Recharge min. : {{ plan.minRechargeUnits | number:'1.0-0' }} SMS</li>
+          <li *ngFor="let feature of planFeatures(plan)"><i class="bi bi-check2"></i> {{ feature }}</li>
         </ul>
       </div>
 
       <button
         class="plan-action"
-        [class.current-action]="plan.code === activePlanCode"
+        [class.current-action]="isCurrentPlan(plan)"
+        [disabled]="loading"
         (click)="subscribe(plan)">
-        <i class="bi" [ngClass]="plan.code === activePlanCode ? 'bi-check-circle' : 'bi-arrow-right-circle'"></i>
-        {{ plan.code === activePlanCode ? 'Formule active' : 'Souscrire / changer' }}
+        <i class="bi" [ngClass]="isCurrentPlan(plan) ? 'bi-check-circle' : 'bi-arrow-right-circle'"></i>
+        {{ isCurrentPlan(plan) ? 'Formule active' : 'Souscrire / changer' }}
       </button>
     </article>
+  </section>
+
+  <div class="section-title mt-4">Historique wallet</div>
+
+  <section class="transactions-panel">
+    <div class="transaction-row transaction-head">
+      <span>Date</span>
+      <span>Type</span>
+      <span>SMS</span>
+      <span>Montant</span>
+      <span>Motif</span>
+    </div>
+
+    <div class="transaction-row" *ngFor="let transaction of transactions">
+      <span>{{ transaction.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      <span [class.credit]="transaction.type === 'CREDIT'" [class.debit]="transaction.type === 'DEBIT'">
+        {{ transactionTypeLabel(transaction.type) }}
+      </span>
+      <span>{{ transaction.smsUnits | number:'1.0-0' }}</span>
+      <span>{{ transaction.amount || 0 | number:'1.0-0' }} FCFA</span>
+      <span>{{ transaction.reason }}</span>
+    </div>
+
+    <div class="empty-state" *ngIf="!transactions.length">
+      Aucun mouvement wallet pour cette entreprise.
+    </div>
   </section>
 </div>

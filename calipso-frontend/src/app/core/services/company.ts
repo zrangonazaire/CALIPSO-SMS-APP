@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../api';
-import { Company } from '../models/api.models';
+import { Company, CompanySubscriptionSummary } from '../models/api.models';
 
 @Injectable({
   providedIn: 'root',
@@ -24,7 +24,7 @@ export class CompanyService {
     return this.http.put<Company>(`${this.apiUrl}/${companyId}`, company);
   }
 
-  rechargeWallet(companyId: number, smsUnits: number): Observable<Company> {
-    return this.http.post<Company>(`${this.apiUrl}/${companyId}/wallet/recharge`, { smsUnits });
+  rechargeWallet(companyId: number, smsUnits: number): Observable<CompanySubscriptionSummary> {
+    return this.http.post<CompanySubscriptionSummary>(`${this.apiUrl}/${companyId}/wallet/recharge`, { smsUnits });
   }
 }

@@ -187,6 +187,57 @@
   background: #64748b;
 }
 
+.transactions-panel {
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+.transaction-row {
+  display: grid;
+  grid-template-columns: 160px 110px 90px 130px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 18px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.transaction-row:last-child {
+  border-bottom: 0;
+}
+
+.transaction-head {
+  min-height: 44px;
+  color: #172554;
+  background: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.credit,
+.debit {
+  font-weight: 800;
+}
+
+.credit {
+  color: #15803d;
+}
+
+.debit {
+  color: #b91c1c;
+}
+
+.empty-state {
+  padding: 22px;
+  color: #64748b;
+  text-align: center;
+}
+
 @media (max-width: 1200px) {
   .plans-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -205,7 +256,13 @@
   }
 
   .balance-panel,
-  .plans-grid {
+  .plans-grid,
+  .transaction-row {
     grid-template-columns: 1fr;
+  }
+
+  .transaction-row {
+    align-items: start;
+    padding: 14px 18px;
   }
 }

@@ -112,6 +112,9 @@ export interface ManualSmsResponse {
 }
 
 export type SmsSendSource = 'CAMPAIGN' | 'MANUAL';
+export type SubscriptionPlanCode = 'ESSENTIEL' | 'STANDARD' | 'AVANCE' | 'VOLUME';
+export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+export type WalletTransactionType = 'CREDIT' | 'DEBIT' | 'REFUND';
 
 export interface SmsSendHistory {
   id: number;
@@ -126,4 +129,45 @@ export interface SmsSendHistory {
   status: string;
   errorMessage?: string;
   sentAt: string;
+}
+
+export interface SubscriptionPlan {
+  id: number;
+  code: SubscriptionPlanCode;
+  name: string;
+  pricePerSms: number;
+  durationDays: number;
+  minRechargeUnits: number;
+  active: boolean;
+}
+
+export interface CompanySubscription {
+  id: number;
+  planCode: SubscriptionPlanCode;
+  planName: string;
+  pricePerSms: number;
+  durationDays: number;
+  status: SubscriptionStatus;
+  startedAt: string;
+  expiresAt: string;
+}
+
+export interface CompanySubscriptionSummary {
+  companyId: number;
+  companyName: string;
+  smsBalance: number;
+  activeSubscription?: CompanySubscription | null;
+}
+
+export interface WalletTransaction {
+  id: number;
+  companyId: number;
+  companyName: string;
+  subscriptionId?: number;
+  type: WalletTransactionType;
+  smsUnits: number;
+  unitPrice?: number;
+  amount?: number;
+  reason: string;
+  createdAt: string;
 }
