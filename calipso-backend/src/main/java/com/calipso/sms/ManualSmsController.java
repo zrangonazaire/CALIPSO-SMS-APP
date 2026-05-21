@@ -2,6 +2,8 @@ package com.calipso.sms;
 
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
+import com.calipso.recipient.RecipientStatus;
+import com.calipso.subscription.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,8 @@ public class ManualSmsController {
     private final CompanyRepository companyRepository;
     private final SmsMessageService smsMessageService;
     private final SmsSendHistoryRepository historyRepository;
+    private final SubscriptionService subscriptionService;
+    private final OrangeSmsClient orangeSmsClient;
 
     @PostMapping("/send")
     public ManualSmsResponse send(@RequestBody @Valid ManualSmsRequest request) {
@@ -29,50 +33,42 @@ public class ManualSmsController {
 
         int segmentsPerRecipient = smsMessageService.calculateSmsSegments(request.message());
         int totalSegments = validNumbers.size() * segmentsPerRecipient;
-        int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
+        subscriptionService.validateSmsBalance(company, totalSegments);
 
-        if (totalSegments > currentBalance) {
-            throw new RuntimeException("Solde SMS insuffisant");
+        int sentCount = 0;
+        for (String phoneNumber : validNumbers) {
+            String normalizedPhone = orangeSmsClient.normalizePhone(phoneNumber);
+            SmsDeliveryResult deliveryResult = orangeSmsClient.sendSms(
+                    request.message(),
+                    company.getSenderPhone(),
+                    normalizedPhone,
+                    company.getName()
+            );
+
+            if (deliveryResult.sent()) {
+                sentCount++;
+            }
+
+            historyRepository.save(SmsSendHistory.builder()
+                    .company(company)
+                    .source(SmsSendSource.MANUAL)
+                    .phoneNumber(normalizedPhone)
+                    .message(request.message())
+                    .segmentCount(segmentsPerRecipient)
+                    .status(deliveryResult.sent() ? RecipientStatus.SENT : RecipientStatus.FAILED)
+                    .errorMessage(deliveryResult.errorMessage())
+                    .build());
         }
 
-        company.setSmsBalance(currentBalance - totalSegments);
-        companyRepository.save(company);
-
-        validNumbers.forEach(phoneNumber -> historyRepository.save(SmsSendHistory.builder()
-                .company(company)
-                .source(SmsSendSource.MANUAL)
-                .phoneNumber(normalizePhone(phoneNumber))
-                .message(request.message())
-                .segmentCount(segmentsPerRecipient)
-                .build()));
+        int sentSegments = sentCount * segmentsPerRecipient;
+        subscriptionService.debitSms(company, sentSegments, "Envoi SMS manuel");
 
         return new ManualSmsResponse(
                 phoneNumbers.size(),
-                validNumbers.size(),
+                sentCount,
                 segmentsPerRecipient,
-                totalSegments,
+                sentSegments,
                 company.getSmsBalance()
         );
-    }
-
-    private String normalizePhone(String phone) {
-        String cleaned = phone.replace(" ", "")
-                .replace("-", "")
-                .replace(".", "")
-                .trim();
-
-        if (cleaned.startsWith("+")) {
-            return cleaned;
-        }
-
-        if (cleaned.startsWith("225")) {
-            return "+" + cleaned;
-        }
-
-        if (cleaned.startsWith("01") || cleaned.startsWith("05") || cleaned.startsWith("07")) {
-            return "+225" + cleaned;
-        }
-
-        return cleaned;
     }
 }

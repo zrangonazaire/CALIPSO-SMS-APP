@@ -14,9 +14,12 @@ import com.calipso.recipient.CampaignRecipientRepository;
 import com.calipso.recipient.RecipientStatus;
 import com.calipso.smstemplate.SmsTemplate;
 import com.calipso.smstemplate.SmsTemplateRepository;
+import com.calipso.sms.OrangeSmsClient;
+import com.calipso.sms.SmsDeliveryResult;
 import com.calipso.sms.SmsSendHistory;
 import com.calipso.sms.SmsSendHistoryRepository;
 import com.calipso.sms.SmsSendSource;
+import com.calipso.subscription.SubscriptionService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,6 +35,8 @@ public class CampaignController {
     private final ExcelVariableRepository variableRepository;
     private final CampaignRecipientRepository recipientRepository;
     private final SmsSendHistoryRepository historyRepository;
+    private final SubscriptionService subscriptionService;
+    private final OrangeSmsClient orangeSmsClient;
 
     @PostMapping
     public Campaign create(@RequestBody @Valid CreateCampaignRequest request) {
@@ -87,35 +92,54 @@ public class CampaignController {
         int totalSegments = validRecipients.stream()
                 .mapToInt(recipient -> recipient.getSegmentCount() == null ? 1 : recipient.getSegmentCount())
                 .sum();
-
-        int balance = campaign.getCompany().getSmsBalance() == null ? 0 : campaign.getCompany().getSmsBalance();
-        if (totalSegments > balance) {
-            throw new RuntimeException("Solde SMS insuffisant");
-        }
+        subscriptionService.validateSmsBalance(campaign.getCompany(), totalSegments);
 
         campaign.setStatus(CampaignStatus.SENDING);
         campaignRepository.save(campaign);
 
+        int sentCount = 0;
+        int failedCount = 0;
+        int sentSegments = 0;
+
         for (CampaignRecipient recipient : validRecipients) {
-            recipient.setStatus(RecipientStatus.SENT);
-            recipient.setSentAt(LocalDateTime.now());
+            String normalizedPhone = orangeSmsClient.normalizePhone(recipient.getPhoneNumber());
+            SmsDeliveryResult deliveryResult = orangeSmsClient.sendSms(
+                    recipient.getGeneratedMessage(),
+                    campaign.getCompany().getSenderPhone(),
+                    normalizedPhone,
+                    campaign.getCompany().getName()
+            );
+
+            RecipientStatus status = deliveryResult.sent() ? RecipientStatus.SENT : RecipientStatus.FAILED;
+            if (deliveryResult.sent()) {
+                sentCount++;
+                sentSegments += recipient.getSegmentCount() == null ? 1 : recipient.getSegmentCount();
+            } else {
+                failedCount++;
+            }
+
+            recipient.setPhoneNumber(normalizedPhone);
+            recipient.setStatus(status);
+            recipient.setErrorMessage(deliveryResult.errorMessage());
+            recipient.setSentAt(deliveryResult.sent() ? LocalDateTime.now() : null);
             recipientRepository.save(recipient);
 
             historyRepository.save(SmsSendHistory.builder()
                     .company(campaign.getCompany())
                     .campaign(campaign)
                     .source(SmsSendSource.CAMPAIGN)
-                    .phoneNumber(recipient.getPhoneNumber())
+                    .phoneNumber(normalizedPhone)
                     .message(recipient.getGeneratedMessage())
                     .segmentCount(recipient.getSegmentCount())
-                    .status(RecipientStatus.SENT)
+                    .status(status)
+                    .errorMessage(deliveryResult.errorMessage())
                     .sentAt(recipient.getSentAt())
                     .build());
         }
 
-        campaign.getCompany().setSmsBalance(balance - totalSegments);
-        campaign.setTotalSent(validRecipients.size());
-        campaign.setTotalFailed(0);
+        subscriptionService.debitSms(campaign.getCompany(), sentSegments, "Envoi campagne: " + campaign.getName());
+        campaign.setTotalSent(sentCount);
+        campaign.setTotalFailed(failedCount);
         campaign.setStatus(CampaignStatus.COMPLETED);
 
         return campaignRepository.save(campaign);

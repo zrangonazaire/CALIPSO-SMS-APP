@@ -28,3 +28,15 @@ management:
     web:
       exposure:
         include: health,info
+
+sms:
+  orange:
+    token-url: "${ORANGE_SMS_TOKEN_URL:https://api.orange.com/oauth/v3/token}"
+    outbound-url: "${ORANGE_SMS_OUTBOUND_URL:https://api.orange.com/smsmessaging/v1/outbound/{senderAddress}/requests}"
+    basic-authorization: ${ORANGE_SMS_BASIC_AUTH:}
+    client-id: ${ORANGE_SMS_CLIENT_ID:}
+    client-secret: ${ORANGE_SMS_CLIENT_SECRET:}
+    default-sender-address: "${ORANGE_SMS_SENDER_ADDRESS:+2250000}"
+    default-country-code: ${ORANGE_SMS_COUNTRY_CODE:225}
+    connect-timeout-seconds: ${ORANGE_SMS_CONNECT_TIMEOUT_SECONDS:10}
+    request-timeout-seconds: ${ORANGE_SMS_REQUEST_TIMEOUT_SECONDS:30}

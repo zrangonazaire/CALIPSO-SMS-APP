@@ -5,6 +5,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import com.calipso.subscription.CompanySubscriptionSummaryResponse;
+import com.calipso.subscription.SubscriptionService;
+
 import java.util.List;
 
 @RestController
@@ -13,6 +16,7 @@ import java.util.List;
 public class CompanyController {
 
     private final CompanyRepository companyRepository;
+    private final SubscriptionService subscriptionService;
 
     @PostMapping
     public Company create(@RequestBody @Valid CreateCompanyRequest request) {
@@ -62,16 +66,10 @@ public class CompanyController {
     }
 
     @PostMapping("/{id}/wallet/recharge")
-    public Company rechargeWallet(
+    public CompanySubscriptionSummaryResponse rechargeWallet(
             @PathVariable Long id,
             @RequestBody @Valid RechargeWalletRequest request
     ) {
-        Company company = companyRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
-
-        int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
-        company.setSmsBalance(currentBalance + request.smsUnits());
-
-        return companyRepository.save(company);
+        return subscriptionService.rechargeWallet(id, request.smsUnits());
     }
 }
