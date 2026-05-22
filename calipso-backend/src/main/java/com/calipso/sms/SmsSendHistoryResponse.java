@@ -14,7 +14,12 @@ public record SmsSendHistoryResponse(
         Integer segmentCount,
         String status,
         String errorMessage,
-        LocalDateTime sentAt
+        String providerResourceUrl,
+        String providerResourceId,
+        String deliveryStatus,
+        LocalDateTime sentAt,
+        LocalDateTime deliveredAt,
+        LocalDateTime createdAt
 ) {
     public static SmsSendHistoryResponse from(SmsSendHistory history) {
         return new SmsSendHistoryResponse(
@@ -29,7 +34,12 @@ public record SmsSendHistoryResponse(
                 history.getSegmentCount(),
                 history.getStatus().name(),
                 history.getErrorMessage(),
-                history.getSentAt()
+                history.getProviderResourceUrl(),
+                history.getProviderResourceId(),
+                history.getDeliveryStatus(),
+                history.getSentAt(),
+                history.getDeliveredAt(),
+                history.getCreatedAt()
         );
     }
 }

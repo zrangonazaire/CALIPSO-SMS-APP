@@ -46,7 +46,22 @@ public class SmsSendHistory {
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(columnDefinition = "TEXT")
+    private String providerResponse;
+
+    @Column(columnDefinition = "TEXT")
+    private String providerResourceUrl;
+
+    private String providerResourceId;
+
+    private String deliveryStatus;
+
+    @Column(columnDefinition = "TEXT")
+    private String deliveryReceiptPayload;
+
     private LocalDateTime sentAt;
+
+    private LocalDateTime deliveredAt;
 
     private LocalDateTime createdAt;
 
@@ -56,7 +71,7 @@ public class SmsSendHistory {
             createdAt = LocalDateTime.now();
         }
 
-        if (sentAt == null) {
+        if (status == RecipientStatus.SENT && sentAt == null) {
             sentAt = LocalDateTime.now();
         }
 

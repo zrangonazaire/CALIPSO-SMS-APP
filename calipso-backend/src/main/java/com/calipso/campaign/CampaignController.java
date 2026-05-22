@@ -106,8 +106,7 @@ public class CampaignController {
             SmsDeliveryResult deliveryResult = orangeSmsClient.sendSms(
                     recipient.getGeneratedMessage(),
                     campaign.getCompany().getSenderPhone(),
-                    normalizedPhone,
-                    campaign.getCompany().getName()
+                    normalizedPhone
             );
 
             RecipientStatus status = deliveryResult.sent() ? RecipientStatus.SENT : RecipientStatus.FAILED;
@@ -133,6 +132,9 @@ public class CampaignController {
                     .segmentCount(recipient.getSegmentCount())
                     .status(status)
                     .errorMessage(deliveryResult.errorMessage())
+                    .providerResponse(deliveryResult.providerResponse())
+                    .providerResourceUrl(deliveryResult.providerResourceUrl())
+                    .providerResourceId(deliveryResult.providerResourceId())
                     .sentAt(recipient.getSentAt())
                     .build());
         }

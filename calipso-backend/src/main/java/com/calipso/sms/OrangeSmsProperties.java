@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record OrangeSmsProperties(
         String tokenUrl,
         String outboundUrl,
+        String contractsUrl,
         String basicAuthorization,
         String clientId,
         String clientSecret,
@@ -20,6 +21,9 @@ public record OrangeSmsProperties(
         }
         if (outboundUrl == null || outboundUrl.isBlank()) {
             outboundUrl = "https://api.orange.com/smsmessaging/v1/outbound/{senderAddress}/requests";
+        }
+        if (contractsUrl == null || contractsUrl.isBlank()) {
+            contractsUrl = "https://api.orange.com/sms/admin/v1/contracts?country=CIV";
         }
         if (defaultCountryCode == null || defaultCountryCode.isBlank()) {
             defaultCountryCode = "225";

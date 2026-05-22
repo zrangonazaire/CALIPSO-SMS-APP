@@ -1,0 +1,232 @@
+.sms-api-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.api-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  margin-bottom: .35rem;
+  color: #0f766e;
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.api-actions {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) auto;
+  gap: .75rem;
+  align-items: center;
+}
+
+.status-strip,
+.metric-grid,
+.ops-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.status-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.status-strip span,
+.metric-tile span,
+.panel-head span,
+.contract-row span,
+.quality-list span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.status-strip strong {
+  display: block;
+  margin-top: .25rem;
+  color: #172554;
+}
+
+.status-strip i {
+  color: #16a34a;
+}
+
+.metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-tile {
+  display: grid;
+  min-height: 150px;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.metric-tile i {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  margin-bottom: .8rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+}
+
+.metric-tile strong {
+  align-self: end;
+  color: #172554;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.metric-tile.balance i {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.metric-tile.success i {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.metric-tile.danger i {
+  color: #b91c1c;
+  background: #fee2e2;
+}
+
+.metric-tile.rate i {
+  color: #c2410c;
+  background: #ffedd5;
+}
+
+.ops-grid {
+  grid-template-columns: minmax(0, 1.4fr) minmax(340px, .8fr);
+}
+
+.ops-panel {
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.panel-head,
+.contract-row,
+.quality-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-head {
+  margin-bottom: 1rem;
+}
+
+.panel-head h5 {
+  margin: 0;
+  color: #172554;
+  font-weight: 800;
+}
+
+.contract-row {
+  padding: .9rem;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.contract-row + .contract-row {
+  margin-top: .75rem;
+}
+
+.contract-row strong,
+.contract-row span {
+  display: block;
+}
+
+.contract-metric {
+  min-width: 82px;
+  text-align: right;
+}
+
+.contract-metric strong {
+  color: #172554;
+  font-size: 1.4rem;
+}
+
+.quality-list {
+  display: grid;
+  gap: .7rem;
+}
+
+.quality-list > div {
+  padding: .85rem;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.quality-list strong {
+  color: #172554;
+  font-size: 1.25rem;
+}
+
+.recent-panel {
+  overflow: hidden;
+}
+
+.message-cell {
+  max-width: 420px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-state {
+  padding: 1rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .status-strip,
+  .metric-grid,
+  .ops-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .api-header,
+  .panel-head,
+  .contract-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .api-actions,
+  .status-strip,
+  .metric-grid,
+  .ops-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contract-metric {
+    text-align: left;
+  }
+}

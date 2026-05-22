@@ -11,6 +11,7 @@ import { RecipientList } from './features/recipient-list/recipient-list';
 import { Subscription } from './features/subscription/subscription';
 import { ManualSms } from './features/manual-sms/manual-sms';
 import { SmsHistory } from './features/sms-history/sms-history';
+import { SmsApi } from './features/sms-api/sms-api';
 import { Login } from './features/login/login';
 import { authGuard } from './core/auth/auth.guard';
 
@@ -23,6 +24,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: Dashboard },
+      { path: 'sms-api', component: SmsApi },
       { path: 'companies', component: CompanyList },
       { path: 'import-profiles', component: ImportProfileList },
       { path: 'excel-variables', component: ExcelVariableList },

@@ -6,9 +6,10 @@
 
   <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
   <div class="alert alert-success" *ngIf="result">
-    {{ result.acceptedRecipients }} destinataire(s) accepte(s),
+    {{ result.acceptedRecipients }} destinataire(s) accepte(s) par Orange,
     {{ result.totalSegments }} unite(s) consommee(s).
     Solde restant : {{ result.remainingSmsBalance }} SMS.
+    Livraison au telephone non confirmee sans accuse de reception Orange.
   </div>
 
   <div class="row g-4">

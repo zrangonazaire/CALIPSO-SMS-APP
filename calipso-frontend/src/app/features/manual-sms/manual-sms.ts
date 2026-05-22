@@ -50,13 +50,47 @@ export class ManualSms implements OnInit {
     this.error = '';
     this.result = undefined;
 
-    this.manualSmsService.send({
+    const phoneNumbers = this.phoneNumbers;
+    const selectedCompany = this.companies.find((company) => company.id === this.selectedCompanyId);
+    const payload = {
       companyId: this.selectedCompanyId,
       message: this.message,
-      phoneNumbers: this.phoneNumbers,
-    }).subscribe({
-      next: (result) => this.result = result,
-      error: (err) => this.error = err.error?.message || 'Envoi impossible.',
+      phoneNumbers,
+    };
+
+    console.groupCollapsed('[Manual SMS] Valeurs envoyees');
+    console.log('Payload API', payload);
+    console.log('Entreprise', {
+      id: selectedCompany?.id,
+      name: selectedCompany?.name,
+      senderPhone: selectedCompany?.senderPhone || '',
+      smsBalance: selectedCompany?.smsBalance || 0,
     });
+    console.log('Estimation', {
+      caracteres: this.message.length,
+      segmentsParDestinataire: this.segmentEstimate,
+      unitesEstimees: phoneNumbers.length * this.segmentEstimate,
+    });
+    console.groupEnd();
+
+    this.manualSmsService.send(payload).subscribe({
+      next: (result) => {
+        console.log('[Manual SMS] Reponse API', result);
+        this.result = result;
+      },
+      error: (err) => {
+        console.error('[Manual SMS] Erreur API', err);
+        this.error = this.errorMessage(err);
+      },
+    });
+  }
+
+  private errorMessage(err: unknown): string {
+    if (typeof err === 'object' && err !== null && 'error' in err) {
+      const body = (err as { error?: { detail?: string; message?: string; error?: string } }).error;
+      return body?.detail || body?.message || body?.error || 'Envoi impossible.';
+    }
+
+    return 'Envoi impossible.';
   }
 }

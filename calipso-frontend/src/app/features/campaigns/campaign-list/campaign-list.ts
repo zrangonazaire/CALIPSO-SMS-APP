@@ -138,11 +138,11 @@ export class CampaignList implements OnInit {
       DRAFT: 'Brouillon',
       IMPORTED: 'Importee',
       SENDING: 'Envoi en cours',
-      COMPLETED: 'Envoyee',
+      COMPLETED: 'Terminee',
       FAILED: 'Echec',
       VALID: 'Valide',
       INVALID: 'Invalide',
-      SENT: 'Envoye',
+      SENT: 'Accepte Orange',
       PENDING: 'En attente',
     };
 
@@ -150,7 +150,7 @@ export class CampaignList implements OnInit {
   }
 
   statusClass(status?: string): string {
-    if (status === 'COMPLETED' || status === 'SENT' || status === 'VALID') {
+    if (status === 'COMPLETED' || status === 'VALID') {
       return 'badge-soft-success';
     }
 

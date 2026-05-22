@@ -128,7 +128,43 @@ export interface SmsSendHistory {
   segmentCount: number;
   status: string;
   errorMessage?: string;
-  sentAt: string;
+  providerResourceUrl?: string;
+  providerResourceId?: string;
+  deliveryStatus?: string;
+  sentAt?: string;
+  deliveredAt?: string;
+  createdAt?: string;
+}
+
+export interface OrangeSmsContract {
+  id?: string;
+  type?: string;
+  country?: string;
+  offerName?: string;
+  availableUnits?: number;
+  requestedUnits?: number;
+  status?: string;
+  expirationDate?: string;
+  creationDate?: string;
+  lastUpdateDate?: string;
+}
+
+export interface SmsApiDashboard {
+  companyId: number;
+  companyName: string;
+  senderPhone?: string;
+  remainingSmsBalance: number;
+  totalMessages: number;
+  acceptedMessages: number;
+  deliveredMessages: number;
+  failedMessages: number;
+  pendingMessages: number;
+  consumedSegments: number;
+  failedSegments: number;
+  successRate: number;
+  lastActivityAt?: string;
+  contracts: OrangeSmsContract[];
+  recentMessages: SmsSendHistory[];
 }
 
 export interface SubscriptionPlan {

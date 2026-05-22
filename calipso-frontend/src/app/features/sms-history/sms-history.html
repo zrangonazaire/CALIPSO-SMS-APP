@@ -74,7 +74,13 @@
         </div>
         <p>{{ item.message }}</p>
         <small>
-          {{ item.campaignName || 'Envoi sans campagne' }} · {{ item.sentAt | date:'dd/MM/yyyy HH:mm' }}
+          {{ item.campaignName || 'Envoi sans campagne' }} - {{ (item.sentAt || item.createdAt) | date:'dd/MM/yyyy HH:mm' }}
+          <ng-container *ngIf="item.providerResourceId">
+            - ID Orange {{ item.providerResourceId }}
+          </ng-container>
+          <ng-container *ngIf="item.deliveryStatus">
+            - DR {{ item.deliveryStatus }}
+          </ng-container>
         </small>
       </div>
       <div class="segment-box">

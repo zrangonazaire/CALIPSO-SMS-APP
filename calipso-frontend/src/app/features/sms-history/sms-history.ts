@@ -89,7 +89,7 @@ export class SmsHistory implements OnInit {
 
   statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      SENT: 'Envoye',
+      SENT: 'Accepte Orange',
       DELIVERED: 'Livre',
       FAILED: 'Echec',
       VALID: 'Valide',
@@ -101,7 +101,7 @@ export class SmsHistory implements OnInit {
   }
 
   statusClass(status: string): string {
-    if (status === 'SENT' || status === 'DELIVERED') {
+    if (status === 'DELIVERED') {
       return 'badge-soft-success';
     }
 
@@ -109,6 +109,6 @@ export class SmsHistory implements OnInit {
       return 'badge-soft-danger';
     }
 
-    return 'badge-soft-primary';
+    return 'badge-soft-warning';
   }
 }

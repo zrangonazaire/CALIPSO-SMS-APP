@@ -14,7 +14,7 @@ public class SmsSendHistoryController {
 
     @GetMapping("/company/{companyId}")
     public List<SmsSendHistoryResponse> findByCompany(@PathVariable Long companyId) {
-        return historyRepository.findByCompanyIdOrderBySentAtDesc(companyId)
+        return historyRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
                 .stream()
                 .map(SmsSendHistoryResponse::from)
                 .toList();

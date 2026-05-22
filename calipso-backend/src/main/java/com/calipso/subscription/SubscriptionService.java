@@ -3,7 +3,9 @@ package com.calipso.subscription;
 import com.calipso.billing.TransactionType;
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
+import com.calipso.sms.OrangeSmsClient;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,12 +16,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SubscriptionService {
 
     private final CompanyRepository companyRepository;
     private final SubscriptionPlanRepository planRepository;
     private final CompanySubscriptionRepository subscriptionRepository;
     private final WalletTransactionRepository transactionRepository;
+    private final OrangeSmsClient orangeSmsClient;
 
     public List<SubscriptionPlanResponse> findPlans() {
         return planRepository.findByActiveTrueOrderByPricePerSmsDesc()
@@ -30,6 +34,7 @@ public class SubscriptionService {
 
     public CompanySubscriptionSummaryResponse getCompanySubscription(Long companyId) {
         Company company = findCompany(companyId);
+        synchronizeOrangeSmsBalance(company);
         CompanySubscription activeSubscription = findActiveSubscription(companyId).orElse(null);
         return toSummary(company, activeSubscription);
     }
@@ -95,9 +100,13 @@ public class SubscriptionService {
             return;
         }
 
-        CompanySubscription subscription = validateSmsBalance(company, smsUnits);
+        CompanySubscription subscription = requireActiveSubscription(company.getId());
 
         int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
+        if (smsUnits > currentBalance) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solde SMS insuffisant");
+        }
+
         company.setSmsBalance(currentBalance - smsUnits);
         companyRepository.save(company);
 
@@ -114,11 +123,31 @@ public class SubscriptionService {
 
     public CompanySubscription validateSmsBalance(Company company, int smsUnits) {
         CompanySubscription subscription = requireActiveSubscription(company.getId());
+        synchronizeOrangeSmsBalance(company);
         int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
         if (smsUnits > currentBalance) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solde SMS insuffisant");
         }
         return subscription;
+    }
+
+    @Transactional
+    public Company synchronizeOrangeSmsBalance(Company company) {
+        int orangeBalance = orangeSmsClient.fetchAvailableSmsUnits();
+        int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
+
+        if (orangeBalance != currentBalance) {
+            log.info(
+                    "[SMS Balance] Synchronisation solde Orange: companyId={}, ancienSolde={}, nouveauSolde={}",
+                    company.getId(),
+                    currentBalance,
+                    orangeBalance
+            );
+            company.setSmsBalance(orangeBalance);
+            return companyRepository.save(company);
+        }
+
+        return company;
     }
 
     public List<WalletTransactionResponse> findTransactions(Long companyId) {

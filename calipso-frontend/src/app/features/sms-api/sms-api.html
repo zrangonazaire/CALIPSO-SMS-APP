@@ -1,0 +1,169 @@
+<div class="container-fluid sms-api-page">
+  <header class="api-header">
+    <div>
+      <span class="eyebrow">API SMS Orange</span>
+      <h2 class="page-title mb-1">Supervision des envois</h2>
+      <p class="text-muted mb-0">Solde, contrats, acceptations API et livraisons terminal.</p>
+    </div>
+
+    <div class="api-actions">
+      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadDashboard()">
+        <option *ngFor="let company of companies" [ngValue]="company.id">
+          {{ company.name }} - {{ company.smsBalance || 0 }} SMS
+        </option>
+      </select>
+      <button class="btn btn-atlas" type="button" (click)="loadDashboard()" [disabled]="loading || !selectedCompanyId">
+        <i class="bi bi-arrow-clockwise me-2"></i>
+        Synchroniser
+      </button>
+    </div>
+  </header>
+
+  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+
+  <section class="status-strip" *ngIf="dashboard">
+    <div>
+      <span>Connexion API</span>
+      <strong><i class="bi bi-check-circle-fill"></i> Active</strong>
+    </div>
+    <div>
+      <span>Expediteur</span>
+      <strong>{{ dashboard.senderPhone || 'Non defini' }}</strong>
+    </div>
+    <div>
+      <span>Contrats actifs</span>
+      <strong>{{ activeContracts.length }}</strong>
+    </div>
+    <div>
+      <span>Derniere activite</span>
+      <strong>{{ dashboard.lastActivityAt ? (dashboard.lastActivityAt | date:'dd/MM HH:mm') : '-' }}</strong>
+    </div>
+  </section>
+
+  <section class="metric-grid" *ngIf="dashboard">
+    <article class="metric-tile balance">
+      <i class="bi bi-wallet2"></i>
+      <span>SMS restants</span>
+      <strong>{{ dashboard.remainingSmsBalance | number:'1.0-0' }}</strong>
+    </article>
+
+    <article class="metric-tile success">
+      <i class="bi bi-send-check"></i>
+      <span>SMS acceptes API</span>
+      <strong>{{ dashboard.acceptedMessages | number:'1.0-0' }}</strong>
+    </article>
+
+    <article class="metric-tile danger">
+      <i class="bi bi-exclamation-triangle"></i>
+      <span>SMS en echec</span>
+      <strong>{{ dashboard.failedMessages | number:'1.0-0' }}</strong>
+    </article>
+
+    <article class="metric-tile rate">
+      <i class="bi bi-activity"></i>
+      <span>Taux d'acceptation API</span>
+      <strong>{{ dashboard.successRate | number:'1.1-1' }}%</strong>
+    </article>
+  </section>
+
+  <section class="ops-grid" *ngIf="dashboard">
+    <article class="ops-panel">
+      <div class="panel-head">
+        <div>
+          <h5>Contrats Orange</h5>
+          <span>{{ dashboard.contracts.length }} contrat(s) configure(s)</span>
+        </div>
+        <span class="badge badge-soft-success" *ngIf="activeContracts.length">Actif</span>
+        <span class="badge badge-soft-danger" *ngIf="!activeContracts.length">Inactif</span>
+      </div>
+
+      <div class="contract-row" *ngFor="let contract of dashboard.contracts">
+        <div>
+          <strong>{{ contract.country || '-' }} - {{ contract.offerName || 'Offre SMS' }}</strong>
+          <span>{{ contract.type || 'Contrat' }} · expiration {{ contract.expirationDate | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="contract-metric">
+          <strong>{{ contract.availableUnits || 0 }}</strong>
+          <span>unites</span>
+        </div>
+        <span class="badge" [ngClass]="statusClass(contract.status)">{{ statusLabel(contract.status) }}</span>
+      </div>
+
+      <div class="empty-state" *ngIf="dashboard.contracts.length === 0">
+        Aucun contrat Orange retourne par l'API.
+      </div>
+    </article>
+
+    <article class="ops-panel">
+      <div class="panel-head">
+        <div>
+          <h5>Qualite des envois</h5>
+          <span>{{ dashboard.totalMessages }} tentative(s) enregistree(s)</span>
+        </div>
+      </div>
+
+      <div class="quality-list">
+        <div>
+          <span>Livres au terminal</span>
+          <strong>{{ dashboard.deliveredMessages }}</strong>
+        </div>
+        <div>
+          <span>Acceptes, livraison non confirmee</span>
+          <strong>{{ deliveryGap }}</strong>
+        </div>
+        <div>
+          <span>En attente / valides</span>
+          <strong>{{ dashboard.pendingMessages }}</strong>
+        </div>
+        <div>
+          <span>Segments acceptes</span>
+          <strong>{{ dashboard.consumedSegments }}</strong>
+        </div>
+        <div>
+          <span>Segments en echec</span>
+          <strong>{{ dashboard.failedSegments }}</strong>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="ops-panel recent-panel" *ngIf="dashboard">
+    <div class="panel-head">
+      <div>
+        <h5>Derniers envois</h5>
+        <span>Historique technique recent</span>
+      </div>
+      <span *ngIf="loading">Synchronisation...</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead>
+          <tr>
+            <th>Numero</th>
+            <th>Message</th>
+            <th>Source</th>
+            <th>Statut</th>
+            <th>Segments</th>
+            <th>Livraison</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of latestMessages">
+            <td class="fw-semibold">{{ item.phoneNumber }}</td>
+            <td class="message-cell">{{ item.message }}</td>
+            <td>{{ sourceLabel(item.source) }}</td>
+            <td><span class="badge" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span></td>
+            <td>{{ item.segmentCount || 1 }}</td>
+            <td>{{ item.deliveryStatus || 'Non confirmee' }}</td>
+            <td>{{ (item.createdAt || item.sentAt) | date:'dd/MM/yyyy HH:mm' }}</td>
+          </tr>
+          <tr *ngIf="latestMessages.length === 0">
+            <td colspan="7" class="text-center text-muted py-4">Aucun envoi SMS pour cette entreprise.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

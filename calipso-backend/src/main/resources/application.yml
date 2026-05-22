@@ -3,6 +3,11 @@ server:
   port: 8080
 
 spring:
+  config:
+    import:
+      - "optional:file:./orange-sms.local.properties"
+      - "optional:file:./calipso-backend/orange-sms.local.properties"
+
   application:
     name: calipso
 
@@ -33,6 +38,7 @@ sms:
   orange:
     token-url: "${ORANGE_SMS_TOKEN_URL:https://api.orange.com/oauth/v3/token}"
     outbound-url: "${ORANGE_SMS_OUTBOUND_URL:https://api.orange.com/smsmessaging/v1/outbound/{senderAddress}/requests}"
+    contracts-url: "${ORANGE_SMS_CONTRACTS_URL:https://api.orange.com/sms/admin/v1/contracts?country=CIV}"
     basic-authorization: ${ORANGE_SMS_BASIC_AUTH:}
     client-id: ${ORANGE_SMS_CLIENT_ID:}
     client-secret: ${ORANGE_SMS_CLIENT_SECRET:}
