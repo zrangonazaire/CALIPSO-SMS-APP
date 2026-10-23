@@ -6,4 +6,5 @@ import java.util.Optional;
 
 public interface AuthTokenRepository extends JpaRepository<AuthToken, Long> {
     Optional<AuthToken> findByToken(String token);
+    void deleteByUserId(Long userId);
 }

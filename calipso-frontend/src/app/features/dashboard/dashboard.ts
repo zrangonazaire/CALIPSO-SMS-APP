@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Campaign, Company } from '../../core/models/api.models';
+import { AuthService } from '../../core/auth/auth';
+import { Campaign, CampaignChannel } from '../../core/models/api.models';
 import { CampaignService } from '../../core/services/campaign';
-import { CompanyService } from '../../core/services/company';
+import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-dashboard',
@@ -11,82 +12,65 @@ import { CompanyService } from '../../core/services/company';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
-export class Dashboard implements OnInit {
-  private readonly companyService = inject(CompanyService);
+export class Dashboard {
+  readonly auth = inject(AuthService);
+  readonly workspace = inject(WorkspaceService);
   private readonly campaignService = inject(CampaignService);
 
-  companies: Company[] = [];
   campaigns: Campaign[] = [];
   error = '';
 
-  ngOnInit(): void {
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        const firstCompanyId = companies[0]?.id;
-        if (firstCompanyId) {
-          this.loadCampaigns(firstCompanyId);
-        }
-      },
-      error: () => this.error = 'Impossible de charger les donnees du tableau de bord.',
+  constructor() {
+    effect(() => {
+      const companyId = this.workspace.selectedCompanyId();
+      if (companyId) {
+        this.loadCampaigns(companyId);
+      }
     });
   }
 
-  get totalSmsBalance(): number {
-    return this.companies.reduce((total, company) => total + (company.smsBalance || 0), 0);
+  get activeBalance(): number {
+    return this.workspace.activeCompany()?.smsBalance ?? 0;
   }
 
   get completedCampaigns(): number {
-    return this.campaigns.filter((campaign) => campaign.status === 'COMPLETED').length;
+    return this.campaigns.filter((c) => c.status === 'COMPLETED').length;
   }
 
-  get importedCampaigns(): number {
-    return this.campaigns.filter((campaign) => campaign.status === 'IMPORTED').length;
+  get readyCampaigns(): number {
+    return this.campaigns.filter((c) => c.status === 'IMPORTED' || c.status === 'DRAFT').length;
   }
 
-  get sentSms(): number {
-    return this.campaigns.reduce((total, campaign) => total + (campaign.totalSent || 0), 0);
+  get totalSentMessages(): number {
+    return this.campaigns.reduce((sum, c) => sum + (c.totalSent || 0), 0);
   }
 
-  get setupSteps(): Array<{ label: string; detail: string; link: string; done: boolean }> {
-    return [
-      {
-        label: 'Creer une societe',
-        detail: 'Un compte client porte le solde SMS et les campagnes.',
-        link: '/companies',
-        done: this.companies.length > 0,
-      },
-      {
-        label: 'Crediter le solde SMS',
-        detail: 'Ajoutez des unites avant tout envoi reel.',
-        link: '/subscription',
-        done: this.totalSmsBalance > 0,
-      },
-      {
-        label: 'Creer un profil de campagne',
-        detail: 'Regroupez le format Excel, les variables et les contenus SMS.',
-        link: '/import-profiles',
-        done: false,
-      },
-      {
-        label: 'Configurer les colonnes Excel',
-        detail: 'Declarez les colonnes, dont la variable destinataire SMS.',
-        link: '/excel-variables',
-        done: false,
-      },
-      {
-        label: 'Creer et envoyer une campagne',
-        detail: 'Importez Excel, controlez les destinataires, puis envoyez.',
-        link: '/campaigns/create',
-        done: this.campaigns.length > 0,
-      },
-    ];
+  countByChannel(ch: CampaignChannel): number {
+    return this.campaigns.filter((c) => (c.channel || 'SMS') === ch).length;
+  }
+
+  statusLabel(status?: string): string {
+    const labels: Record<string, string> = {
+      DRAFT: 'Brouillon',
+      IMPORTED: 'Prête à envoyer',
+      SENDING: 'En cours',
+      COMPLETED: 'Envoyée',
+      FAILED: 'Échec',
+    };
+    return status ? labels[status] || status : 'Brouillon';
+  }
+
+  statusClass(status?: string): string {
+    if (status === 'COMPLETED') return 'badge-soft-success';
+    if (status === 'FAILED') return 'badge-soft-danger';
+    if (status === 'IMPORTED') return 'badge-soft-primary';
+    return 'badge-soft-warning';
   }
 
   private loadCampaigns(companyId: number): void {
     this.campaignService.findByCompany(companyId).subscribe({
-      next: (campaigns) => this.campaigns = campaigns,
-      error: () => this.error = 'Impossible de charger les campagnes recentes.',
+      next: (campaigns) => (this.campaigns = campaigns),
+      error: () => (this.error = 'Impossible de charger les campagnes récentes.'),
     });
   }
 }

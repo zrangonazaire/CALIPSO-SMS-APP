@@ -24,6 +24,15 @@ public class SubscriptionController {
         return subscriptionService.getCompanySubscription(companyId);
     }
 
+    @GetMapping("/companies/{companyId}/simulate")
+    public PriceSimulationResponse simulatePricing(
+            @PathVariable Long companyId,
+            @RequestParam(defaultValue = "1000") Integer smsUnits,
+            @RequestParam(required = false) SubscriptionPlanCode planCode
+    ) {
+        return subscriptionService.simulatePricing(companyId, smsUnits, planCode);
+    }
+
     @PostMapping("/companies/{companyId}/subscribe")
     public CompanySubscriptionSummaryResponse subscribe(
             @PathVariable Long companyId,
@@ -37,7 +46,12 @@ public class SubscriptionController {
             @PathVariable Long companyId,
             @RequestBody @Valid RechargeWalletRequest request
     ) {
-        return subscriptionService.rechargeWallet(companyId, request.smsUnits());
+        return subscriptionService.rechargeWallet(companyId, request);
+    }
+
+    @PostMapping("/payments/webhook")
+    public WalletTransactionResponse handlePaymentWebhook(@RequestBody @Valid PaymentWebhookRequest request) {
+        return subscriptionService.handlePaymentWebhook(request);
     }
 
     @GetMapping("/companies/{companyId}/transactions")

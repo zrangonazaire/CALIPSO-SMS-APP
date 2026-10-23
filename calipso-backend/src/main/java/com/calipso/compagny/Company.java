@@ -36,9 +36,11 @@ public class Company {
     private String businessType;
 
     @Column(nullable = false)
+    @Builder.Default
     private Integer smsBalance = 0;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
 
     private LocalDateTime createdAt;

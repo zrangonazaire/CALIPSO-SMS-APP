@@ -27,6 +27,7 @@ public class CompanySubscription {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
 
     @Column(nullable = false)

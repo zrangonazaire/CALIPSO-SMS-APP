@@ -28,7 +28,7 @@ public class CompanyController {
                 .address(request.address())
                 .contactName(request.contactName())
                 .businessType(request.businessType())
-                .smsBalance(0)
+                .smsBalance(50)
                 .active(true)
                 .build();
 
@@ -70,6 +70,6 @@ public class CompanyController {
             @PathVariable Long id,
             @RequestBody @Valid RechargeWalletRequest request
     ) {
-        return subscriptionService.rechargeWallet(id, request.smsUnits());
+        return subscriptionService.rechargeWallet(id, request);
     }
 }

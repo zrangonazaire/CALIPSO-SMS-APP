@@ -26,26 +26,32 @@ public class OrangeSmsDeliveryReceiptController {
     @Transactional
     public ResponseEntity<Void> receive(@RequestBody JsonNode payload) {
         JsonNode notification = payload.path("deliveryInfoNotification");
-        String providerResourceId = textOrNull(notification.path("callbackData"));
+        String deliveryCallbackData = textOrNull(notification.path("callbackData"));
         String deliveryStatus = textOrNull(notification.path("deliveryInfo").path("deliveryStatus"));
         String recipientAddress = textOrNull(notification.path("deliveryInfo").path("address"));
 
         log.info(
-                "[Orange SMS DR] Accuse recu: providerResourceId={}, deliveryStatus={}, address={}, payload={}",
-                providerResourceId,
+                "[Orange SMS DR] Accuse recu: callbackData={}, deliveryStatus={}, address={}, payload={}",
+                deliveryCallbackData,
                 deliveryStatus,
                 recipientAddress,
                 payload
         );
 
-        if (providerResourceId == null || providerResourceId.isBlank()) {
-            log.warn("[Orange SMS DR] Accuse ignore: callbackData/resource_id absent");
+        if ((deliveryCallbackData == null || deliveryCallbackData.isBlank())
+                && (recipientAddress == null || recipientAddress.isBlank())) {
+            log.warn("[Orange SMS DR] Accuse ignore: callbackData et address absents");
             return ResponseEntity.ok().build();
         }
 
-        List<SmsSendHistory> histories = historyRepository.findByProviderResourceIdOrderByCreatedAtDesc(providerResourceId);
+        List<SmsSendHistory> histories = findHistories(deliveryCallbackData, recipientAddress);
+
         if (histories.isEmpty()) {
-            log.warn("[Orange SMS DR] Aucun historique trouve pour providerResourceId={}", providerResourceId);
+            log.warn(
+                    "[Orange SMS DR] Aucun historique trouve pour callbackData={}, address={}",
+                    deliveryCallbackData,
+                    recipientAddress
+            );
             return ResponseEntity.ok().build();
         }
 
@@ -70,6 +76,40 @@ public class OrangeSmsDeliveryReceiptController {
         return ResponseEntity.ok().build();
     }
 
+    private List<SmsSendHistory> findHistories(String deliveryCallbackData, String recipientAddress) {
+        if (deliveryCallbackData != null && !deliveryCallbackData.isBlank()) {
+            List<SmsSendHistory> histories = historyRepository
+                    .findByDeliveryCallbackDataOrderByCreatedAtDesc(deliveryCallbackData);
+
+            if (!histories.isEmpty()) {
+                return histories;
+            }
+
+            histories = historyRepository.findByProviderResourceIdOrderByCreatedAtDesc(deliveryCallbackData);
+            if (!histories.isEmpty()) {
+                return histories;
+            }
+
+            histories = latestByPhone(normalizeReceiptAddress(deliveryCallbackData));
+            if (!histories.isEmpty()) {
+                return histories;
+            }
+        }
+
+        return latestByPhone(normalizeReceiptAddress(recipientAddress));
+    }
+
+    private List<SmsSendHistory> latestByPhone(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            return List.of();
+        }
+
+        return historyRepository.findByPhoneNumberOrderByCreatedAtDesc(phoneNumber)
+                .stream()
+                .limit(1)
+                .toList();
+    }
+
     private String textOrNull(JsonNode node) {
         if (node == null || node.isMissingNode() || node.isNull()) {
             return null;
@@ -77,5 +117,18 @@ public class OrangeSmsDeliveryReceiptController {
 
         String text = node.asText();
         return text == null || text.isBlank() ? null : text;
+    }
+
+    private String normalizeReceiptAddress(String address) {
+        if (address == null) {
+            return null;
+        }
+
+        String normalized = address.trim();
+        if (normalized.regionMatches(true, 0, "tel:", 0, "tel:".length())) {
+            normalized = normalized.substring("tel:".length());
+        }
+
+        return normalized;
     }
 }

@@ -16,6 +16,10 @@ export class SmsTemplateService {
     return this.http.get<SmsTemplate[]>(`${this.apiUrl}/profile/${profileId}`);
   }
 
+  findByCompany(companyId: number): Observable<SmsTemplate[]> {
+    return this.http.get<SmsTemplate[]>(`${this.apiUrl}/company/${companyId}`);
+  }
+
   create(template: SmsTemplate): Observable<SmsTemplate> {
     return this.http.post<SmsTemplate>(this.apiUrl, template);
   }

@@ -1,12 +1,11 @@
 package com.calipso.smstemplate;
 
+import com.calipso.compagny.Company;
+import com.calipso.importprofile.ExcelImportProfile;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-
-import com.calipso.compagny.Company;
-import com.calipso.importprofile.ExcelImportProfile;
 
 @Getter
 @Setter
@@ -24,7 +23,7 @@ public class SmsTemplate {
     @ManyToOne(optional = false)
     private Company company;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = true)
     private ExcelImportProfile profile;
 
     @Column(nullable = false)
@@ -33,6 +32,7 @@ public class SmsTemplate {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Builder.Default
     private Boolean active = true;
 
     private LocalDateTime createdAt;

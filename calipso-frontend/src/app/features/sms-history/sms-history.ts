@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Company, SmsSendHistory } from '../../core/models/api.models';
-import { CompanyService } from '../../core/services/company';
+import { CampaignChannel, SmsSendHistory } from '../../core/models/api.models';
 import { SmsHistoryService } from '../../core/services/sms-history';
+import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-sms-history',
@@ -11,43 +11,39 @@ import { SmsHistoryService } from '../../core/services/sms-history';
   templateUrl: './sms-history.html',
   styleUrl: './sms-history.scss',
 })
-export class SmsHistory implements OnInit {
-  private readonly companyService = inject(CompanyService);
+export class SmsHistory {
+  readonly workspace = inject(WorkspaceService);
   private readonly historyService = inject(SmsHistoryService);
 
-  companies: Company[] = [];
   history: SmsSendHistory[] = [];
-  selectedCompanyId = 0;
+  channelFilter: 'ALL' | CampaignChannel = 'ALL';
   sourceFilter: 'ALL' | 'CAMPAIGN' | 'MANUAL' = 'ALL';
   statusFilter = 'ALL';
   search = '';
   error = '';
   loading = false;
 
-  ngOnInit(): void {
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        this.selectedCompanyId = companies[0]?.id || 0;
-        if (this.selectedCompanyId) {
-          this.loadHistory();
-        }
-      },
-      error: () => this.error = 'Impossible de charger les entreprises.',
+  constructor() {
+    effect(() => {
+      const companyId = this.workspace.selectedCompanyId();
+      if (companyId) {
+        this.loadHistory(companyId);
+      }
     });
   }
 
-  loadHistory(): void {
+  loadHistory(companyId = this.workspace.selectedCompanyId()): void {
+    if (!companyId) return;
     this.error = '';
     this.loading = true;
-    this.historyService.findByCompany(this.selectedCompanyId).subscribe({
+    this.historyService.findByCompany(companyId).subscribe({
       next: (history) => {
         this.history = history;
         this.loading = false;
       },
       error: () => {
         this.loading = false;
-        this.error = 'Impossible de charger l historique des SMS.';
+        this.error = 'Impossible de charger le journal des envois.';
       },
     });
   }
@@ -56,14 +52,17 @@ export class SmsHistory implements OnInit {
     const term = this.search.trim().toLowerCase();
 
     return this.history.filter((item) => {
+      const ch = item.channel || 'SMS';
+      const matchesChannel = this.channelFilter === 'ALL' || ch === this.channelFilter;
       const matchesSource = this.sourceFilter === 'ALL' || item.source === this.sourceFilter;
       const matchesStatus = this.statusFilter === 'ALL' || item.status === this.statusFilter;
-      const matchesSearch = !term
-        || item.phoneNumber.toLowerCase().includes(term)
-        || item.message.toLowerCase().includes(term)
-        || (item.campaignName || '').toLowerCase().includes(term);
+      const matchesSearch =
+        !term ||
+        item.phoneNumber.toLowerCase().includes(term) ||
+        item.message.toLowerCase().includes(term) ||
+        (item.campaignName || '').toLowerCase().includes(term);
 
-      return matchesSource && matchesStatus && matchesSearch;
+      return matchesChannel && matchesSource && matchesStatus && matchesSearch;
     });
   }
 
@@ -84,31 +83,28 @@ export class SmsHistory implements OnInit {
   }
 
   sourceLabel(source: string): string {
-    return source === 'CAMPAIGN' ? 'Campagne' : 'Envoi cible';
+    return source === 'CAMPAIGN' ? 'Campagne' : 'Envoi Express';
   }
 
   statusLabel(status: string): string {
     const labels: Record<string, string> = {
-      SENT: 'Accepte Orange',
-      DELIVERED: 'Livre',
-      FAILED: 'Echec',
+      SENT: 'Envoyé',
+      DELIVERED: 'Livré',
+      FAILED: 'Échec',
       VALID: 'Valide',
       INVALID: 'Invalide',
       PENDING: 'En attente',
     };
-
     return labels[status] || status;
   }
 
   statusClass(status: string): string {
-    if (status === 'DELIVERED') {
+    if (status === 'DELIVERED' || status === 'SENT') {
       return 'badge-soft-success';
     }
-
     if (status === 'FAILED' || status === 'INVALID') {
       return 'badge-soft-danger';
     }
-
     return 'badge-soft-warning';
   }
 }

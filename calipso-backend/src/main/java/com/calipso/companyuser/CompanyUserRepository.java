@@ -10,4 +10,6 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
     boolean existsByUsernameIgnoreCase(String username);
     boolean existsByPasswordHashIsNotNull();
     Optional<CompanyUser> findByUsernameIgnoreCase(String username);
+    Optional<CompanyUser> findFirstByEmailIgnoreCase(String email);
+    Optional<CompanyUser> findFirstByUsernameIgnoreCaseOrEmailIgnoreCase(String username, String email);
 }

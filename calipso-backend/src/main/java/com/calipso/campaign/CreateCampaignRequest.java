@@ -1,13 +1,20 @@
 package com.calipso.campaign;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record CreateCampaignRequest(
-        @NotNull Long profileId,
-        @NotNull Long templateId,
-        @NotNull Long phoneVariableId,
+        Long companyId,
+        Long profileId,
+        Long templateId,
+        Long phoneVariableId,
         @NotBlank String name,
-        String description
+        String description,
+        CampaignChannel channel,
+        String messageTemplate,
+        String emailSubject,
+        String recipientColumn,
+        String mediaUrl,
+        String ctaLabel,
+        String ctaUrl
 ) {
 }

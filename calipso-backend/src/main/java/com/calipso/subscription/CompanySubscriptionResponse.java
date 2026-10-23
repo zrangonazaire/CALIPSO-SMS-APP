@@ -8,6 +8,7 @@ public record CompanySubscriptionResponse(
         String planName,
         Integer pricePerSms,
         Integer durationDays,
+        Integer minRechargeUnits,
         SubscriptionStatus status,
         LocalDateTime startedAt,
         LocalDateTime expiresAt
@@ -24,6 +25,7 @@ public record CompanySubscriptionResponse(
                 plan.getName(),
                 plan.getPricePerSms(),
                 plan.getDurationDays(),
+                plan.getMinRechargeUnits(),
                 subscription.getStatus(),
                 subscription.getStartedAt(),
                 subscription.getExpiresAt()

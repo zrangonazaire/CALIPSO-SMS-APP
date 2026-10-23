@@ -1,13 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { SmsTemplate } from './sms-template';
+import { SmsTemplateService } from './sms-template';
 
-describe('SmsTemplate', () => {
-  let service: SmsTemplate;
+describe('SmsTemplateService', () => {
+  let service: SmsTemplateService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(SmsTemplate);
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(SmsTemplateService);
   });
 
   it('should be created', () => {

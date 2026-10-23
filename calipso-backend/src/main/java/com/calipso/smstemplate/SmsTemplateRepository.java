@@ -7,4 +7,6 @@ import java.util.List;
 public interface SmsTemplateRepository extends JpaRepository<SmsTemplate, Long> {
 
     List<SmsTemplate> findByProfileIdAndActiveTrue(Long profileId);
+
+    List<SmsTemplate> findByCompanyIdAndActiveTrueOrderByCreatedAtDesc(Long companyId);
 }
