@@ -1,28 +1,29 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/auth/auth';
 import { Company, CompanyUser, CompanyUserRole, ImportProfile } from '../../../core/models/api.models';
 import { CompanyService } from '../../../core/services/company';
 import { CompanyUserService } from '../../../core/services/company-user';
 import { ImportProfileService } from '../../../core/services/import-profile';
+import { WorkspaceService } from '../../../core/services/workspace';
 
 @Component({
   selector: 'app-company-list',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule],
   templateUrl: './company-list.html',
   styleUrl: './company-list.scss',
 })
-export class CompanyList implements OnInit {
+export class CompanyList {
+  readonly auth = inject(AuthService);
+  readonly workspace = inject(WorkspaceService);
   private readonly companyService = inject(CompanyService);
   private readonly userService = inject(CompanyUserService);
   private readonly profileService = inject(ImportProfileService);
 
-  companies: Company[] = [];
   users: CompanyUser[] = [];
   profiles: ImportProfile[] = [];
-  selectedCompanyId = 0;
-  activeTab: 'company' | 'users' | 'profiles' = 'company';
+  activeTab: 'company' | 'users' | 'security' | 'admin-companies' = 'company';
   loading = false;
   error = '';
   success = '';
@@ -33,51 +34,61 @@ export class CompanyList implements OnInit {
   settingsForm: Company = this.emptyCompanyForm();
   userForm: CompanyUser = this.emptyUserForm();
 
-  ngOnInit(): void {
-    this.loadCompanies();
-  }
+  passwordForm = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  };
 
-  get selectedCompany(): Company | undefined {
-    return this.companies.find((company) => company.id === this.selectedCompanyId);
-  }
+  resetTargetUser?: CompanyUser;
+  adminResetPasswordValue = '';
 
-  loadCompanies(): void {
-    this.loading = true;
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        this.selectedCompanyId = this.selectedCompanyId || companies[0]?.id || 0;
-        this.loading = false;
-        this.loadCompanyContext();
-      },
-      error: () => {
-        this.error = 'Impossible de charger les societes.';
-        this.loading = false;
-      },
+  constructor() {
+    effect(() => {
+      const companyId = this.workspace.selectedCompanyId();
+      if (companyId) {
+        this.loadCompanyContext(companyId);
+      }
     });
   }
 
-  loadCompanyContext(): void {
+  get companies(): Company[] {
+    return this.workspace.companies();
+  }
+
+  get selectedCompanyId(): number {
+    return this.workspace.selectedCompanyId();
+  }
+
+  get selectedCompany(): Company | undefined {
+    return this.workspace.activeCompany();
+  }
+
+  selectCompany(companyId: number): void {
+    this.workspace.selectCompany(companyId);
+  }
+
+  loadCompanyContext(companyId = this.selectedCompanyId): void {
     this.success = '';
     this.error = '';
-    this.userForm.companyId = this.selectedCompanyId;
+    this.userForm.companyId = companyId;
     const company = this.selectedCompany;
     this.settingsForm = company ? { ...company } : this.emptyCompanyForm();
 
-    if (!this.selectedCompanyId) {
+    if (!companyId) {
       this.users = [];
       this.profiles = [];
       return;
     }
 
-    this.userService.findByCompany(this.selectedCompanyId).subscribe({
-      next: (users) => this.users = users,
-      error: () => this.error = 'Impossible de charger les utilisateurs.',
+    this.userService.findByCompany(companyId).subscribe({
+      next: (users) => (this.users = users),
+      error: () => (this.error = 'Impossible de charger les membres de l\'équipe.'),
     });
 
-    this.profileService.findByCompany(this.selectedCompanyId).subscribe({
-      next: (profiles) => this.profiles = profiles,
-      error: () => this.error = 'Impossible de charger les profils.',
+    this.profileService.findByCompany(companyId).subscribe({
+      next: (profiles) => (this.profiles = profiles),
+      error: () => (this.error = ''),
     });
   }
 
@@ -89,11 +100,10 @@ export class CompanyList implements OnInit {
     this.companyService.create(this.form).subscribe({
       next: (company) => {
         this.form = this.emptyCompanyForm();
-        this.selectedCompanyId = company.id || 0;
-        this.success = 'Societe creee avec succes.';
-        this.loadCompanies();
+        this.success = 'Nouvel espace entreprise créé avec succès.';
+        this.workspace.refreshCompanies(company.id);
       },
-      error: () => this.error = 'Impossible de creer la societe.',
+      error: () => (this.error = 'Impossible de créer l\'espace entreprise.'),
     });
   }
 
@@ -104,11 +114,11 @@ export class CompanyList implements OnInit {
 
     this.companyService.update(this.selectedCompanyId, this.settingsForm).subscribe({
       next: (company) => {
-        this.success = 'Parametres entreprise mis a jour.';
-        this.companies = this.companies.map((item) => item.id === company.id ? company : item);
+        this.success = 'Paramètres de votre espace enregistrés.';
         this.settingsForm = { ...company };
+        this.workspace.refreshCompanies(company.id);
       },
-      error: () => this.error = 'Impossible de mettre a jour les parametres entreprise.',
+      error: () => (this.error = 'Impossible de mettre à jour les paramètres.'),
     });
   }
 
@@ -117,10 +127,10 @@ export class CompanyList implements OnInit {
     this.userService.create(this.userForm).subscribe({
       next: () => {
         this.userForm = this.emptyUserForm();
-        this.success = 'Utilisateur cree avec succes.';
+        this.success = 'Membre ajouté à votre équipe avec succès.';
         this.loadCompanyContext();
       },
-      error: (err) => this.error = err.error?.message || 'Impossible de creer l utilisateur.',
+      error: (err) => (this.error = err.error?.message || 'Impossible de créer l\'utilisateur.'),
     });
   }
 
@@ -130,8 +140,86 @@ export class CompanyList implements OnInit {
     }
     this.userService.updateStatus(user.id, !user.active).subscribe({
       next: () => this.loadCompanyContext(),
-      error: () => this.error = 'Impossible de changer le statut utilisateur.',
+      error: () => (this.error = 'Impossible de modifier le statut du membre.'),
     });
+  }
+
+  changeUserRole(user: CompanyUser, role: CompanyUserRole): void {
+    if (!user.id) {
+      return;
+    }
+    this.userService.updateRole(user.id, role).subscribe({
+      next: () => {
+        this.success = `Rôle de ${user.fullName} mis à jour (${role}).`;
+        this.loadCompanyContext();
+      },
+      error: () => (this.error = 'Impossible de modifier le rôle.'),
+    });
+  }
+
+  openAdminReset(user: CompanyUser): void {
+    this.resetTargetUser = user;
+    this.adminResetPasswordValue = '';
+    this.error = '';
+    this.success = '';
+  }
+
+  confirmAdminReset(): void {
+    if (!this.resetTargetUser?.id || !this.adminResetPasswordValue.trim()) {
+      return;
+    }
+    this.userService.resetPassword(this.resetTargetUser.id, this.adminResetPasswordValue.trim()).subscribe({
+      next: (res) => {
+        this.success = res.message;
+        this.resetTargetUser = undefined;
+        this.adminResetPasswordValue = '';
+      },
+      error: (err) => {
+        this.error = err.error?.message || 'Impossible de réinitialiser ce mot de passe.';
+      },
+    });
+  }
+
+  deleteUser(user: CompanyUser): void {
+    if (!user.id) {
+      return;
+    }
+    this.userService.delete(user.id).subscribe({
+      next: () => {
+        this.success = `Collaborateur ${user.fullName} retiré de l'espace.`;
+        this.loadCompanyContext();
+      },
+      error: () => (this.error = 'Impossible de supprimer ce collaborateur.'),
+    });
+  }
+
+  updateMyPassword(): void {
+    this.error = '';
+    this.success = '';
+
+    if (!this.passwordForm.currentPassword || !this.passwordForm.newPassword) {
+      this.error = 'Renseignez votre mot de passe actuel et le nouveau mot de passe.';
+      return;
+    }
+    if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
+      this.error = 'La confirmation du nouveau mot de passe ne correspond pas.';
+      return;
+    }
+
+    this.auth
+      .changePassword({
+        currentPassword: this.passwordForm.currentPassword,
+        newPassword: this.passwordForm.newPassword,
+      })
+      .subscribe({
+        next: (res) => {
+          this.success = res.message;
+          this.passwordForm = { currentPassword: '', newPassword: '', confirmPassword: '' };
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Mot de passe actuel incorrect.';
+        },
+      });
   }
 
   private emptyCompanyForm(): Company {
@@ -139,6 +227,14 @@ export class CompanyList implements OnInit {
   }
 
   private emptyUserForm(): CompanyUser {
-    return { companyId: this.selectedCompanyId, fullName: '', username: '', email: '', password: '', phone: '', role: 'OPERATOR' };
+    return {
+      companyId: this.selectedCompanyId,
+      fullName: '',
+      username: '',
+      email: '',
+      password: '',
+      phone: '',
+      role: 'OPERATOR',
+    };
   }
 }

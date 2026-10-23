@@ -31,6 +31,7 @@ public class ExcelImportProfile {
 
     private String description;
 
+    @Builder.Default
     private Boolean active = true;
 
     private LocalDateTime createdAt;

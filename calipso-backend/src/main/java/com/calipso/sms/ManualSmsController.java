@@ -1,5 +1,6 @@
 package com.calipso.sms;
 
+import com.calipso.campaign.CampaignChannel;
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
 import com.calipso.recipient.RecipientStatus;
@@ -23,65 +24,39 @@ public class ManualSmsController {
     private final SmsMessageService smsMessageService;
     private final SmsSendHistoryRepository historyRepository;
     private final SubscriptionService subscriptionService;
-    private final OrangeSmsClient orangeSmsClient;
+    private final MultichannelGatewayService gatewayService;
 
     @PostMapping("/send")
     public ManualSmsResponse send(@RequestBody @Valid ManualSmsRequest request) {
-        log.info("[Manual SMS] Payload recu du frontend: {}", request);
-
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
 
-        List<String> phoneNumbers = request.phoneNumbers() == null ? List.of() : request.phoneNumbers();
-        List<String> validNumbers = phoneNumbers.stream()
-                .filter(number -> number != null && !number.isBlank())
+        CampaignChannel channel = request.channel() == null ? CampaignChannel.SMS : request.channel();
+
+        List<String> targets = request.phoneNumbers() == null ? List.of() : request.phoneNumbers();
+        List<String> validTargets = targets.stream()
+                .filter(target -> target != null && !target.isBlank())
                 .toList();
 
-        int segmentsPerRecipient = smsMessageService.calculateSmsSegments(request.message());
-        int totalSegments = validNumbers.size() * segmentsPerRecipient;
+        int unitsPerRecipient = gatewayService.calculateUnits(channel, request.message(), smsMessageService);
+        int totalUnits = validTargets.size() * unitsPerRecipient;
 
-        log.info(
-                "[Manual SMS] Requete recue: companyId={}, companyName={}, senderPhone={}, smsBalance={}, requestedRecipients={}, validRecipients={}, phoneNumbers={}, message={}, segmentsPerRecipient={}, totalSegments={}",
-                company.getId(),
-                company.getName(),
-                company.getSenderPhone(),
-                company.getSmsBalance(),
-                phoneNumbers.size(),
-                validNumbers.size(),
-                phoneNumbers,
-                request.message(),
-                segmentsPerRecipient,
-                totalSegments
-        );
-
-        subscriptionService.validateSmsBalance(company, totalSegments);
+        subscriptionService.validateSmsBalance(company, totalUnits);
 
         int sentCount = 0;
         String firstErrorMessage = null;
-        for (String phoneNumber : validNumbers) {
-            String normalizedPhone = orangeSmsClient.normalizePhone(phoneNumber);
-            log.info(
-                    "[Manual SMS] Envoi destinataire: companyId={}, senderPhone={}, phoneOriginal={}, phoneNormalise={}, message={}",
-                    company.getId(),
-                    company.getSenderPhone(),
-                    phoneNumber,
-                    normalizedPhone,
-                    request.message()
-            );
+        for (String rawTarget : validTargets) {
+            String normalizedTarget = gatewayService.normalizeTarget(channel, rawTarget);
 
-            SmsDeliveryResult deliveryResult = orangeSmsClient.sendSms(
+            SmsDeliveryResult deliveryResult = gatewayService.dispatch(
+                    channel,
                     request.message(),
+                    request.subject(),
                     company.getSenderPhone(),
-                    normalizedPhone
-            );
-
-            log.info(
-                    "[Manual SMS] Resultat destinataire: phone={}, acceptedByOrange={}, statusCode={}, providerResourceId={}, error={}",
-                    normalizedPhone,
-                    deliveryResult.sent(),
-                    deliveryResult.statusCode(),
-                    deliveryResult.providerResourceId(),
-                    deliveryResult.errorMessage()
+                    normalizedTarget,
+                    request.mediaUrl(),
+                    request.ctaLabel(),
+                    request.ctaUrl()
             );
 
             if (deliveryResult.sent()) {
@@ -93,35 +68,39 @@ public class ManualSmsController {
             historyRepository.save(SmsSendHistory.builder()
                     .company(company)
                     .source(SmsSendSource.MANUAL)
-                    .phoneNumber(normalizedPhone)
+                    .channel(channel)
+                    .phoneNumber(normalizedTarget)
+                    .subject(request.subject())
                     .message(request.message())
-                    .segmentCount(segmentsPerRecipient)
+                    .segmentCount(unitsPerRecipient)
                     .status(deliveryResult.sent() ? RecipientStatus.SENT : RecipientStatus.FAILED)
                     .errorMessage(deliveryResult.errorMessage())
                     .providerResponse(deliveryResult.providerResponse())
                     .providerResourceUrl(deliveryResult.providerResourceUrl())
                     .providerResourceId(deliveryResult.providerResourceId())
+                    .deliveryCallbackData(deliveryResult.deliveryCallbackData())
+                    .deliveryStatus(deliveryResult.deliveryCallbackData())
                     .sentAt(deliveryResult.sent() ? java.time.LocalDateTime.now() : null)
                     .build());
         }
 
-        int sentSegments = sentCount * segmentsPerRecipient;
-        if (!validNumbers.isEmpty() && sentCount == 0) {
+        int sentUnits = sentCount * unitsPerRecipient;
+        if (!validTargets.isEmpty() && sentCount == 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY,
                     firstErrorMessage == null || firstErrorMessage.isBlank()
-                            ? "Orange n'a accepte aucun SMS"
-                            : "Orange n'a accepte aucun SMS: " + firstErrorMessage
+                            ? "La passerelle n'a accepté aucun message"
+                            : "Envoi refusé: " + firstErrorMessage
             );
         }
 
-        subscriptionService.debitSms(company, sentSegments, "Envoi SMS manuel");
+        subscriptionService.debitSms(company, sentUnits, "Envoi express " + channel.name());
 
         return new ManualSmsResponse(
-                phoneNumbers.size(),
+                targets.size(),
                 sentCount,
-                segmentsPerRecipient,
-                sentSegments,
+                unitsPerRecipient,
+                sentUnits,
                 company.getSmsBalance()
         );
     }

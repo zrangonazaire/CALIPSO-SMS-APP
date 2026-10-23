@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -27,22 +28,30 @@ public class SmsApiDashboardService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
 
-        List<OrangeSmsContract> contracts = orangeSmsClient.fetchSmsContracts();
-        int orangeBalance = contracts.stream()
-                .filter(contract -> "ACTIVE".equalsIgnoreCase(contract.status()))
-                .mapToInt(contract -> contract.availableUnits() == null ? 0 : contract.availableUnits())
-                .sum();
-
+        List<OrangeSmsContract> contracts = Collections.emptyList();
         int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
-        if (orangeBalance != currentBalance) {
-            log.info(
-                    "[SMS API] Synchronisation solde: companyId={}, ancienSolde={}, soldeOrange={}",
-                    company.getId(),
-                    currentBalance,
-                    orangeBalance
-            );
-            company.setSmsBalance(orangeBalance);
-            companyRepository.save(company);
+        int effectiveBalance = currentBalance;
+
+        try {
+            contracts = orangeSmsClient.fetchSmsContracts();
+            int orangeBalance = contracts.stream()
+                    .filter(contract -> "ACTIVE".equalsIgnoreCase(contract.status()))
+                    .mapToInt(contract -> contract.availableUnits() == null ? 0 : contract.availableUnits())
+                    .sum();
+
+            if (orangeBalance > currentBalance) {
+                log.info(
+                        "[SMS API] Synchronisation solde: companyId={}, ancienSolde={}, soldeOrange={}",
+                        company.getId(),
+                        currentBalance,
+                        orangeBalance
+                );
+                company.setSmsBalance(orangeBalance);
+                companyRepository.save(company);
+                effectiveBalance = orangeBalance;
+            }
+        } catch (Exception e) {
+            log.warn("[SMS API] Contrats Orange non joignables actuellement: {}", e.getMessage());
         }
 
         List<SmsSendHistory> history = historyRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
@@ -60,7 +69,7 @@ public class SmsApiDashboardService {
                 company.getId(),
                 company.getName(),
                 company.getSenderPhone(),
-                orangeBalance,
+                effectiveBalance,
                 totalMessages,
                 acceptedMessages,
                 deliveredMessages,
@@ -71,7 +80,7 @@ public class SmsApiDashboardService {
                 Math.round(successRate * 10.0) / 10.0,
                 lastActivityAt,
                 contracts.stream().map(SmsApiDashboardResponse.OrangeContractResponse::from).toList(),
-                history.stream().limit(8).map(SmsSendHistoryResponse::from).toList()
+                history.stream().limit(12).map(SmsSendHistoryResponse::from).toList()
         );
     }
 

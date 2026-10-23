@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dossier Exécutif — Plateforme Calipso Omnichannel Studio</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800&display=swap');
+
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --slate-900: #0f172a;
+      --slate-700: #334155;
+      --slate-500: #64748b;
+      --slate-200: #e2e8f0;
+      --slate-50: #f8fafc;
+      --emerald: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: var(--slate-900);
+      background: #f1f5f9;
+      line-height: 1.6;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      padding: 12px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .toolbar-title {
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-print {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    .container {
+      max-width: 1060px;
+      margin: 32px auto;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+
+    .cover {
+      background: radial-gradient(circle at top right, #312e81, #0f172a 70%);
+      color: #fff;
+      padding: 56px 56px 48px;
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    .cover h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 36px;
+      line-height: 1.18;
+      margin: 0 0 16px;
+    }
+
+    .cover p {
+      font-size: 16px;
+      color: #cbd5e1;
+      max-width: 780px;
+      margin: 0 0 28px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .meta-box small {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #94a3b8;
+      letter-spacing: 0.06em;
+    }
+
+    .meta-box strong {
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .section {
+      padding: 44px 56px;
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    h2 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 24px;
+      margin: 0 0 12px;
+      color: var(--slate-900);
+    }
+
+    .section-lead {
+      color: var(--slate-700);
+      margin-bottom: 28px;
+      font-size: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 13px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    th {
+      background: var(--slate-50);
+      font-weight: 700;
+      color: var(--slate-900);
+    }
+
+    .screen-card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+      page-break-inside: avoid;
+    }
+
+    .screen-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .screen-header h3 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--primary-dark);
+    }
+
+    .screen-route {
+      font-family: monospace;
+      font-size: 12px;
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .screen-card p {
+      margin: 0 0 16px;
+      color: var(--slate-700);
+      font-size: 14px;
+    }
+
+    .screen-card img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      display: block;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .toolbar { display: none; }
+      .container { box-shadow: none; margin: 0; max-width: 100%; }
+      .section { padding: 28px 32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <div class="toolbar-title">📄 Dossier Exécutif — Calipso Omnichannel Studio (Rapport de Livraison & Captures d'Écran)</div>
+    <button class="btn-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+  </div>
+
+  <div class="container">
+    <header class="cover">
+      <div class="badge-row">
+        <span class="pill">💬 SMS Pro (Orange CI)</span>
+        <span class="pill">🟢 WhatsApp Business Cloud</span>
+        <span class="pill">✉️ Email Marketing HTML</span>
+        <span class="pill">✅ 100 % Audité & Prêt à l'emploi</span>
+      </div>
+      <h1>Calipso Omnichannel Studio<br/>Plateforme Grand Public de Campagnes Multicanales</h1>
+      <p>
+        Transformation complète d'un outil technique d'envoi de SMS en une plateforme SaaS tout-en-un, intuitive et autonome permettant à toute entreprise, école ou commerce de diffuser ses campagnes SMS, WhatsApp et Email en quelques clics.
+      </p>
+      <div class="meta-grid">
+        <div class="meta-box">
+          <small>Architecture</small>
+          <strong>Spring Boot 4 (Java 21) + Angular</strong>
+        </div>
+        <div class="meta-box">
+          <small>Base de données</small>
+          <strong>PostgreSQL 15 (JSONB)</strong>
+        </div>
+        <div class="meta-box">
+          <small>Sécurité & Équipe</small>
+          <strong>Bearer Token + BCrypt + OTP 6 chiffres</strong>
+        </div>
+        <div class="meta-box">
+          <small>Statut de livraison</small>
+          <strong>Validé de bout en bout (E2E)</strong>
+        </div>
+      </div>
+    </header>
+
+    <section class="section">
+      <h2>1. Synthèse des Travaux Réalisés (Avant / Après)</h2>
+      <p class="section-lead">
+        L'objectif majeur était de supprimer toute barrière technique pour l'utilisateur final tout en élargissant la portée de la plateforme aux canaux les plus utilisés aujourd'hui (SMS, WhatsApp et Email).
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Fonctionnalité</th>
+            <th>Avant (Version Initiale)</th>
+            <th>Maintenant (Calipso Studio Grand Public)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Canaux de communication</strong></td>
+            <td>SMS uniquement</td>
+            <td><strong>SMS Pro + WhatsApp Business + Email HTML responsive</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Import de fichiers Excel/CSV</strong></td>
+            <td>Configuration manuelle obligatoire d'un profil et de chaque variable Excel</td>
+            <td><strong>Auto-détection intelligente en 1 clic</strong> des colonnes Téléphone, Email, Prénom et variables</td>
+          </tr>
+          <tr>
+            <td><strong>Création de campagne</strong></td>
+            <td>Dispersée sur 4 écrans techniques</td>
+            <td><strong>Assistant guidé en 4 étapes</strong> avec simulateur iPhone en temps réel</td>
+          </tr>
+          <tr>
+            <td><strong>Gestion des utilisateurs & MDP</strong></td>
+            <td>Aucune récupération de mot de passe autonome</td>
+            <td><strong>Inscription libre (50 crédits offerts) + Mot de passe oublié par code OTP (SMS/WhatsApp/Email) + Gestion d'équipe par rôles</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Continuité d'envoi</strong></td>
+            <td>Erreur bloquante si le contrat externe expire</td>
+            <td><strong>Passerelle hybride intelligente</strong> (API opérateur en priorité + bascule Sandbox locale automatique)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>2. Captures d'Écran Officielles de l'Application</h2>
+      <p class="section-lead">
+        Toutes les captures ci-dessous ont été réalisées en conditions réelles d'exécution sur l'application finale.
+      </p>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.1. Portail de Connexion Grand Public</h3>
+          <span class="screen-route">/login</span>
+        </div>
+        <p>Interface d'accueil moderne présentant la proposition de valeur multicanale et permettant la connexion par identifiant ou adresse email.</p>
+        <img src="./docs/screenshots/01_login.png" alt="Portail de connexion" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.2. Ouverture de Compte en Libre-Service (50 Crédits Offerts)</h3>
+          <span class="screen-route">/login (Inscription)</span>
+        </div>
+        <p>Tout nouveau client peut créer son espace entreprise en 30 secondes et reçoit automatiquement 50 crédits de bienvenue ainsi qu'un forfait actif.</p>
+        <img src="./docs/screenshots/02_register.png" alt="Inscription gratuite" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.3. Récupération de Mot de Passe Oublié par Code OTP Multicanal</h3>
+          <span class="screen-route">/login (Mot de passe oublié)</span>
+        </div>
+        <p>En cas d'oubli, l'utilisateur choisit de recevoir un code de sécurité à 6 chiffres par Email, SMS ou WhatsApp (valable 15 minutes) pour réinitialiser son mot de passe en toute autonomie.</p>
+        <img src="./docs/screenshots/03_forgot_password.png" alt="Mot de passe oublié OTP" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.4. Studio d'Accueil & Tableau de Bord Analytique</h3>
+          <span class="screen-route">/dashboard</span>
+        </div>
+        <p>Vue exécutive centralisant les boutons de lancement rapide (SMS, WhatsApp, Email), la jauge de crédits restants, le taux de délivrance et l'activité récente.</p>
+        <img src="./docs/screenshots/04_dashboard.png" alt="Tableau de bord" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.5. Assistant de Campagne en 4 Étapes — Choix du Canal</h3>
+          <span class="screen-route">/campaigns/create</span>
+        </div>
+        <p>Étape 1 du créateur de campagne : sélection visuelle du canal (SMS Pro, WhatsApp Business ou Email Marketing) et nommage de l'opération.</p>
+        <img src="./docs/screenshots/05_campaign_wizard_step1.png" alt="Wizard Étape 1" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.6. Rédaction Personnalisée & Aperçu iPhone en Temps Réel</h3>
+          <span class="screen-route">/campaigns/create (Étape 3)</span>
+        </div>
+        <p>Insertion de variables dynamiques (<code>{{PRENOM}}</code>, <code>{{VILLE}}</code>), ajout de média et bouton d'action cliquable avec rendu immédiat sur un simulateur d'iPhone.</p>
+        <img src="./docs/screenshots/06_campaign_wizard_preview.png" alt="Wizard Aperçu iPhone" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.7. Suivi des Campagnes & Rapports d'Exécution</h3>
+          <span class="screen-route">/campaigns</span>
+        </div>
+        <p>Liste des campagnes diffusées avec badges de canal, statistiques d'envoi (Envoyés / Échecs / Crédits consommés) et inspection détaillée des destinataires.</p>
+        <img src="./docs/screenshots/11_campaigns_list.png" alt="Liste des campagnes" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.8. Message Express Multicanal</h3>
+          <span class="screen-route">/manual-sms</span>
+        </div>
+        <p>Envoi instantané d'un message unitaire ou groupé sur SMS, WhatsApp ou Email sans fichier Excel, avec aperçu smartphone en direct.</p>
+        <img src="./docs/screenshots/07_manual_express.png" alt="Message Express" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.9. Bibliothèque de Modèles Prêts à l'Emploi</h3>
+          <span class="screen-route">/sms-templates</span>
+        </div>
+        <p>Catalogue de modèles sectoriels (Écoles, Commerce, Santé, Logistique) utilisables en 1 clic et création de modèles personnalisés sauvegardés en base de données.</p>
+        <img src="./docs/screenshots/08_templates_library.png" alt="Bibliothèque de modèles" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.10. Administration d'Équipe, Rôles & Réinitialisation de Mot de Passe</h3>
+          <span class="screen-route">/companies</span>
+        </div>
+        <p>Gestion complète des collaborateurs de l'entreprise : création de comptes, modification des rôles en direct (ADMIN, MANAGER, OPERATOR, VIEWER), réinitialisation de mot de passe en 1 clic par l'administrateur et suspension d'accès.</p>
+        <img src="./docs/screenshots/09_team_management.png" alt="Gestion d'équipe" />
+      </div>
+
+      <div class="screen-card">
+        <div class="screen-header">
+          <h3>2.11. Portefeuille de Crédits, Forfaits & Historique Financier</h3>
+          <span class="screen-route">/subscription</span>
+        </div>
+        <p>Souscription aux plans tarifaires dégressifs (Essentiel, Standard, Avancé, Volume), recharge immédiate de crédits avec calcul automatique en FCFA et journal des mouvements.</p>
+        <img src="./docs/screenshots/10_subscription_wallet.png" alt="Portefeuille et forfaits" />
+      </div>
+    </section>
+  </div>
+</body>
+</html>

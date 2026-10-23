@@ -1,0 +1,132 @@
+.topbar {
+  height: 68px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--calipso-border);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 15;
+}
+
+.topbar-left, .topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.workspace-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--calipso-border);
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.workspace-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.workspace-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--calipso-border);
+  border-radius: 10px;
+}
+
+.workspace-select {
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: #0f172a;
+  outline: none;
+  cursor: pointer;
+}
+
+.channel-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.credit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #4f46e5;
+  text-decoration: none;
+  font-size: 0.84rem;
+  transition: all 0.15s ease;
+}
+
+.credit-pill:hover {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 10px;
+  border-left: 1px solid var(--calipso-border);
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: grid;
+  place-items: center;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.btn-logout {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #64748b;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.btn-logout:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}

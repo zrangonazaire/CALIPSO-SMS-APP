@@ -11,4 +11,8 @@ public interface SmsSendHistoryRepository extends JpaRepository<SmsSendHistory, 
     List<SmsSendHistory> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 
     List<SmsSendHistory> findByProviderResourceIdOrderByCreatedAtDesc(String providerResourceId);
+
+    List<SmsSendHistory> findByDeliveryCallbackDataOrderByCreatedAtDesc(String deliveryCallbackData);
+
+    List<SmsSendHistory> findByPhoneNumberOrderByCreatedAtDesc(String phoneNumber);
 }

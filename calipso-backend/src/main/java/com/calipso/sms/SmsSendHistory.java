@@ -1,6 +1,7 @@
 package com.calipso.sms;
 
 import com.calipso.campaign.Campaign;
+import com.calipso.campaign.CampaignChannel;
 import com.calipso.compagny.Company;
 import com.calipso.recipient.RecipientStatus;
 import jakarta.persistence.*;
@@ -31,16 +32,24 @@ public class SmsSendHistory {
     @Column(nullable = false)
     private SmsSendSource source;
 
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private CampaignChannel channel = CampaignChannel.SMS;
+
     @Column(nullable = false)
     private String phoneNumber;
+
+    private String subject;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
 
+    @Builder.Default
     private Integer segmentCount = 1;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private RecipientStatus status = RecipientStatus.SENT;
 
     @Column(columnDefinition = "TEXT")
@@ -53,6 +62,8 @@ public class SmsSendHistory {
     private String providerResourceUrl;
 
     private String providerResourceId;
+
+    private String deliveryCallbackData;
 
     private String deliveryStatus;
 
@@ -81,6 +92,10 @@ public class SmsSendHistory {
 
         if (status == null) {
             status = RecipientStatus.SENT;
+        }
+
+        if (channel == null) {
+            channel = CampaignChannel.SMS;
         }
     }
 }

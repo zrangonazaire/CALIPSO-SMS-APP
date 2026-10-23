@@ -6,12 +6,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record OrangeSmsProperties(
         String tokenUrl,
         String outboundUrl,
+        String subscriptionUrl,
         String contractsUrl,
         String basicAuthorization,
         String clientId,
         String clientSecret,
         String defaultSenderAddress,
         String defaultCountryCode,
+        String senderName,
+        String deliveryReceiptUrl,
+        String deliveryReceiptSubscriptionId,
         int connectTimeoutSeconds,
         int requestTimeoutSeconds
 ) {
@@ -21,6 +25,9 @@ public record OrangeSmsProperties(
         }
         if (outboundUrl == null || outboundUrl.isBlank()) {
             outboundUrl = "https://api.orange.com/smsmessaging/v1/outbound/{senderAddress}/requests";
+        }
+        if (subscriptionUrl == null || subscriptionUrl.isBlank()) {
+            subscriptionUrl = "https://api.orange.com/smsmessaging/v1/outbound/{senderAddress}/subscriptions";
         }
         if (contractsUrl == null || contractsUrl.isBlank()) {
             contractsUrl = "https://api.orange.com/sms/admin/v1/contracts?country=CIV";

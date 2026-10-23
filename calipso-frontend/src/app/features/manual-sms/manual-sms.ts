@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Company, ManualSmsResponse } from '../../core/models/api.models';
-import { CompanyService } from '../../core/services/company';
+import { CampaignChannel, ManualSmsResponse } from '../../core/models/api.models';
 import { ManualSmsService } from '../../core/services/manual-sms';
+import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-manual-sms',
@@ -11,86 +11,89 @@ import { ManualSmsService } from '../../core/services/manual-sms';
   templateUrl: './manual-sms.html',
   styleUrl: './manual-sms.scss',
 })
-export class ManualSms implements OnInit {
-  private readonly companyService = inject(CompanyService);
+export class ManualSms {
+  readonly workspace = inject(WorkspaceService);
   private readonly manualSmsService = inject(ManualSmsService);
 
-  companies: Company[] = [];
-  selectedCompanyId = 0;
+  channel: CampaignChannel = 'SMS';
+  subject = '';
   phoneNumbersText = '';
   message = '';
+  ctaLabel = '';
+  ctaUrl = '';
   error = '';
+  sending = false;
   result?: ManualSmsResponse;
 
-  ngOnInit(): void {
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        this.selectedCompanyId = companies[0]?.id || 0;
-      },
-      error: () => this.error = 'Impossible de charger les entreprises.',
-    });
-  }
+  readonly quickMessages = [
+    {
+      label: 'Confirmation RDV',
+      subject: 'Confirmation de votre rendez-vous',
+      text: 'Bonjour, nous vous confirmons votre rendez-vous demain à 10h00 dans nos locaux. À très bientôt !',
+    },
+    {
+      label: 'Relance rapide',
+      subject: 'Rappel de règlement',
+      text: 'Bonjour, sauf erreur de notre part, votre facture reste en attente de règlement. Merci de votre diligence.',
+    },
+    {
+      label: 'Code / Alerte',
+      subject: 'Notification importante',
+      text: 'Bonjour, votre dossier est prêt et disponible à l\'accueil. Vous pouvez passer le récupérer dès aujourd\'hui.',
+    },
+  ];
 
   get phoneNumbers(): string[] {
     return this.phoneNumbersText
       .split(/[\n,;]+/)
-      .map((value) => value.trim())
-      .filter(Boolean);
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
   }
 
   get segmentEstimate(): number {
     if (!this.message.trim()) {
       return 0;
     }
-    return this.message.length <= 160 ? 1 : Math.ceil(this.message.length / 153);
+    if (this.channel === 'WHATSAPP' || this.channel === 'EMAIL') {
+      return 1;
+    }
+    const unicode = [...this.message].some((char) => char.charCodeAt(0) > 127);
+    const singleLimit = unicode ? 70 : 160;
+    const multiLimit = unicode ? 67 : 153;
+    return this.message.length <= singleLimit ? 1 : Math.ceil(this.message.length / multiLimit);
   }
 
   send(): void {
-    this.error = '';
-    this.result = undefined;
-
-    const phoneNumbers = this.phoneNumbers;
-    const selectedCompany = this.companies.find((company) => company.id === this.selectedCompanyId);
-    const payload = {
-      companyId: this.selectedCompanyId,
-      message: this.message,
-      phoneNumbers,
-    };
-
-    console.groupCollapsed('[Manual SMS] Valeurs envoyees');
-    console.log('Payload API', payload);
-    console.log('Entreprise', {
-      id: selectedCompany?.id,
-      name: selectedCompany?.name,
-      senderPhone: selectedCompany?.senderPhone || '',
-      smsBalance: selectedCompany?.smsBalance || 0,
-    });
-    console.log('Estimation', {
-      caracteres: this.message.length,
-      segmentsParDestinataire: this.segmentEstimate,
-      unitesEstimees: phoneNumbers.length * this.segmentEstimate,
-    });
-    console.groupEnd();
-
-    this.manualSmsService.send(payload).subscribe({
-      next: (result) => {
-        console.log('[Manual SMS] Reponse API', result);
-        this.result = result;
-      },
-      error: (err) => {
-        console.error('[Manual SMS] Erreur API', err);
-        this.error = this.errorMessage(err);
-      },
-    });
-  }
-
-  private errorMessage(err: unknown): string {
-    if (typeof err === 'object' && err !== null && 'error' in err) {
-      const body = (err as { error?: { detail?: string; message?: string; error?: string } }).error;
-      return body?.detail || body?.message || body?.error || 'Envoi impossible.';
+    const companyId = this.workspace.selectedCompanyId();
+    if (!companyId) {
+      this.error = 'Aucun espace actif détecté.';
+      return;
     }
 
-    return 'Envoi impossible.';
+    this.error = '';
+    this.result = undefined;
+    this.sending = true;
+
+    this.manualSmsService
+      .send({
+        companyId,
+        channel: this.channel,
+        subject: this.subject,
+        message: this.message,
+        phoneNumbers: this.phoneNumbers,
+        ctaLabel: this.ctaLabel,
+        ctaUrl: this.ctaUrl,
+      })
+      .subscribe({
+        next: (result) => {
+          this.sending = false;
+          this.result = result;
+          this.workspace.refreshCompanies(companyId);
+        },
+        error: (err) => {
+          this.sending = false;
+          this.error = err.error?.message || 'Envoi direct impossible.';
+        },
+      });
   }
 }

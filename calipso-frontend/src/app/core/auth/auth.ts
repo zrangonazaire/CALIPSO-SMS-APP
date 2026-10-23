@@ -3,7 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { API_BASE } from '../api';
-import { AuthUser, LoginRequest, LoginResponse, SetupAdminRequest } from './auth.models';
+import {
+  AuthUser,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
+  LoginRequest,
+  LoginResponse,
+  ResetPasswordRequest,
+  SetupAdminRequest,
+} from './auth.models';
 
 @Injectable({
   providedIn: 'root',
@@ -35,6 +44,26 @@ export class AuthService {
     return this.http.post<LoginResponse>(`${this.apiUrl}/setup`, request).pipe(
       tap((response) => this.persistSession(response))
     );
+  }
+
+  register(request: SetupAdminRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/register`, request).pipe(
+      tap((response) => this.persistSession(response))
+    );
+  }
+
+  requestPasswordReset(request: ForgotPasswordRequest): Observable<ForgotPasswordResponse> {
+    return this.http.post<ForgotPasswordResponse>(`${this.apiUrl}/forgot-password`, request);
+  }
+
+  confirmPasswordReset(request: ResetPasswordRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.apiUrl}/reset-password`, request).pipe(
+      tap((response) => this.persistSession(response))
+    );
+  }
+
+  changePassword(request: ChangePasswordRequest): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.apiUrl}/change-password`, request);
   }
 
   loadMe(): Observable<AuthUser> {

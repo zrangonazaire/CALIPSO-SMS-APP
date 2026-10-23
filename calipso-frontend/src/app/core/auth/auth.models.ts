@@ -1,4 +1,4 @@
-import { CompanyUserRole } from '../models/api.models';
+import { CampaignChannel, CompanyUserRole } from '../models/api.models';
 
 export interface LoginRequest {
   username: string;
@@ -11,6 +11,29 @@ export interface SetupAdminRequest {
   username: string;
   email: string;
   password: string;
+}
+
+export interface ForgotPasswordRequest {
+  identifier: string;
+  channel: CampaignChannel;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+  maskedDestination: string;
+  channel: CampaignChannel;
+  devCodeHint?: string;
+}
+
+export interface ResetPasswordRequest {
+  identifier: string;
+  code: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface AuthUser {

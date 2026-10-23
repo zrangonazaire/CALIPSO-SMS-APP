@@ -1,4 +1,5 @@
 export type DataType = 'TEXT' | 'NUMBER' | 'DATE' | 'PHONE' | 'EMAIL' | 'BOOLEAN';
+export type CampaignChannel = 'SMS' | 'WHATSAPP' | 'EMAIL';
 
 export interface Company {
   id?: number;
@@ -55,6 +56,7 @@ export interface ExcelVariable {
 
 export interface SmsTemplate {
   id?: number;
+  companyId?: number;
   profileId?: number;
   profile?: ImportProfile;
   name: string;
@@ -65,6 +67,7 @@ export interface SmsTemplate {
 
 export interface Campaign {
   id?: number;
+  companyId?: number;
   profileId?: number;
   templateId?: number;
   phoneVariableId?: number;
@@ -74,6 +77,13 @@ export interface Campaign {
   phoneVariable?: ExcelVariable;
   name: string;
   description?: string;
+  channel?: CampaignChannel;
+  messageTemplate?: string;
+  emailSubject?: string;
+  recipientColumn?: string;
+  mediaUrl?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
   status?: string;
   totalRecipients?: number;
   totalValid?: number;
@@ -84,10 +94,39 @@ export interface Campaign {
   createdAt?: string;
 }
 
+export interface FileAnalysisResponse {
+  fileName: string;
+  headers: string[];
+  detectedPhoneColumn?: string;
+  detectedEmailColumn?: string;
+  detectedNameColumn?: string;
+  totalRows: number;
+  sampleRows: Record<string, unknown>[];
+  allRows: Record<string, unknown>[];
+}
+
+export interface WizardCampaignRequest {
+  companyId: number;
+  name: string;
+  description?: string;
+  channel: CampaignChannel;
+  messageTemplate: string;
+  emailSubject?: string;
+  recipientColumn?: string;
+  mediaUrl?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  rows: Record<string, unknown>[];
+  sendImmediately: boolean;
+}
+
 export interface Recipient {
   id?: number;
   campaign?: Campaign;
   phoneNumber?: string;
+  email?: string;
+  recipientName?: string;
+  channel?: CampaignChannel;
   rawData?: Record<string, unknown>;
   generatedMessage?: string;
   segmentCount?: number;
@@ -99,8 +138,13 @@ export interface Recipient {
 
 export interface ManualSmsRequest {
   companyId: number;
+  channel?: CampaignChannel;
+  subject?: string;
   message: string;
   phoneNumbers: string[];
+  mediaUrl?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
 }
 
 export interface ManualSmsResponse {
@@ -115,6 +159,8 @@ export type SmsSendSource = 'CAMPAIGN' | 'MANUAL';
 export type SubscriptionPlanCode = 'ESSENTIEL' | 'STANDARD' | 'AVANCE' | 'VOLUME';
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 export type WalletTransactionType = 'CREDIT' | 'DEBIT' | 'REFUND';
+export type PaymentMethod = 'WAVE_CI' | 'ORANGE_MONEY_CI' | 'MTN_MOMO_CI' | 'MOOV_MONEY_CI' | 'CARD' | 'SYSTEM';
+export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
 
 export interface SmsSendHistory {
   id: number;
@@ -123,7 +169,9 @@ export interface SmsSendHistory {
   campaignId?: number;
   campaignName?: string;
   source: SmsSendSource;
+  channel?: CampaignChannel;
   phoneNumber: string;
+  subject?: string;
   message: string;
   segmentCount: number;
   status: string;
@@ -183,6 +231,7 @@ export interface CompanySubscription {
   planName: string;
   pricePerSms: number;
   durationDays: number;
+  minRechargeUnits?: number;
   status: SubscriptionStatus;
   startedAt: string;
   expiresAt: string;
@@ -193,6 +242,7 @@ export interface CompanySubscriptionSummary {
   companyName: string;
   smsBalance: number;
   activeSubscription?: CompanySubscription | null;
+  lastTransaction?: WalletTransaction | null;
 }
 
 export interface WalletTransaction {
@@ -200,10 +250,46 @@ export interface WalletTransaction {
   companyId: number;
   companyName: string;
   subscriptionId?: number;
+  planName?: string;
   type: WalletTransactionType;
   smsUnits: number;
   unitPrice?: number;
   amount?: number;
+  balanceAfter?: number;
+  reference?: string;
+  paymentMethod?: PaymentMethod;
+  paymentStatus?: PaymentStatus;
+  payerPhone?: string;
+  providerName?: string;
+  checkoutUrl?: string;
   reason: string;
   createdAt: string;
+}
+
+export interface PriceSimulationResponse {
+  smsUnits: number;
+  appliedPlanCode: SubscriptionPlanCode;
+  appliedPlanName: string;
+  unitPrice: number;
+  totalAmount: number;
+  baseAmount: number;
+  savingsAmount: number;
+  durationDays: number;
+  autoUpgraded: boolean;
+}
+
+export interface SubscribePayload {
+  planCode: SubscriptionPlanCode;
+  smsUnits?: number;
+  paymentMethod?: PaymentMethod;
+  payerPhone?: string;
+  otpCode?: string;
+}
+
+export interface RechargeWalletPayload {
+  smsUnits: number;
+  planCode?: SubscriptionPlanCode;
+  paymentMethod?: PaymentMethod;
+  payerPhone?: string;
+  otpCode?: string;
 }

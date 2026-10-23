@@ -33,6 +33,7 @@ public class SubscriptionPlan {
     private Integer minRechargeUnits;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
 
     @PrePersist
