@@ -1,6 +1,7 @@
 package com.calipso.sms;
 
 import com.calipso.compagny.Company;
+import com.calipso.auth.CompanyAccess;
 import com.calipso.compagny.CompanyRepository;
 import com.calipso.recipient.RecipientStatus;
 import lombok.RequiredArgsConstructor;
@@ -22,9 +23,11 @@ public class SmsApiDashboardService {
     private final CompanyRepository companyRepository;
     private final SmsSendHistoryRepository historyRepository;
     private final OrangeSmsClient orangeSmsClient;
+    private final CompanyAccess access;
 
     @Transactional
     public SmsApiDashboardResponse getDashboard(Long companyId) {
+        access.requireCompany(companyId);
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
 
@@ -32,7 +35,7 @@ public class SmsApiDashboardService {
         int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
         int effectiveBalance = currentBalance;
 
-        try {
+        if (access.isPlatformAdmin()) try {
             contracts = orangeSmsClient.fetchSmsContracts();
             int orangeBalance = contracts.stream()
                     .filter(contract -> "ACTIVE".equalsIgnoreCase(contract.status()))

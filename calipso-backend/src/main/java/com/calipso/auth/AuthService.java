@@ -32,6 +32,7 @@ public class AuthService {
     private final AuthTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final MultichannelGatewayService gatewayService;
+    private final CompanyAccess access;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public LoginResponse login(LoginRequest request) {
@@ -49,11 +50,11 @@ public class AuthService {
     }
 
     public LoginResponse setupAdmin(SetupAdminRequest request) {
-        return createWorkspaceAccount(request, !userRepository.existsByPasswordHashIsNotNull());
+        return createWorkspaceAccount(request);
     }
 
     public LoginResponse register(SetupAdminRequest request) {
-        return createWorkspaceAccount(request, !userRepository.existsByPasswordHashIsNotNull());
+        return createWorkspaceAccount(request);
     }
 
     public ForgotPasswordResponse requestPasswordReset(ForgotPasswordRequest request) {
@@ -95,13 +96,11 @@ public class AuthService {
             log.warn("[Auth Reset] Envoi externe ignoré, code OTP généré: {}", e.getMessage());
         }
 
-        log.info("[Auth Reset] Code OTP de récupération pour '{}' ({}) = {}", user.getUsername(), chosenChannel, otpCode);
-
         return new ForgotPasswordResponse(
                 "Un code de sécurité à 6 chiffres a été envoyé via " + chosenChannel.name() + ".",
                 maskDestination(destination),
                 chosenChannel,
-                otpCode
+                null
         );
     }
 
@@ -164,7 +163,7 @@ public class AuthService {
         return dest.substring(0, Math.min(6, dest.length() - 2)) + "•••" + dest.substring(dest.length() - 2);
     }
 
-    private LoginResponse createWorkspaceAccount(SetupAdminRequest request, boolean isFirstPlatformUser) {
+    private LoginResponse createWorkspaceAccount(SetupAdminRequest request) {
         if (userRepository.existsByUsernameIgnoreCase(request.username().trim())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ce nom d'utilisateur est déjà utilisé");
         }
@@ -213,7 +212,7 @@ public class AuthService {
                 .build();
 
         AuthToken saved = tokenRepository.save(authToken);
-        return new LoginResponse(saved.getToken(), saved.getExpiresAt(), AuthUserResponse.from(user));
+        return new LoginResponse(saved.getToken(), saved.getExpiresAt(), AuthUserResponse.from(user, access.isPlatformAdmin(user)));
     }
 
     private String generateToken() {

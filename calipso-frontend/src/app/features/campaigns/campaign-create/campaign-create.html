@@ -4,7 +4,8 @@
       <span class="eyebrow"><i class="bi bi-magic"></i> Studio de création assistée</span>
       <h2 class="page-title mb-1">Nouvelle campagne multicanale</h2>
       <p class="text-muted mb-0">
-        Créez et diffusez votre campagne en 4 étapes simples, sans aucune configuration technique préalable.
+        Créez et diffusez votre campagne en 4 étapes simples, sans aucune configuration technique
+        préalable.
       </p>
     </div>
     <a routerLink="/campaigns" class="btn-ghost">
@@ -15,31 +16,74 @@
 
   <!-- Stepper Bar -->
   <nav class="wizard-stepper" aria-label="Progression de la campagne">
-    <button type="button" class="step-pill" [class.active]="step === 1" [class.done]="step > 1" (click)="step = 1">
-      <span class="step-num"><i class="bi bi-check2" *ngIf="step > 1"></i><ng-container *ngIf="step <= 1">1</ng-container></span>
+    <button
+      type="button"
+      class="step-pill"
+      [class.active]="step === 1"
+      [class.done]="step > 1"
+      (click)="step = 1"
+    >
+      <span class="step-num"
+        ><i class="bi bi-check2" *ngIf="step > 1"></i
+        ><ng-container *ngIf="step <= 1">1</ng-container></span
+      >
       <div class="step-text">
         <strong>Canal & Objectif</strong>
         <small>{{ channel }} · {{ name || 'À définir' }}</small>
       </div>
     </button>
 
-    <button type="button" class="step-pill" [class.active]="step === 2" [class.done]="step > 2" (click)="name.trim() && (step = 2)">
-      <span class="step-num"><i class="bi bi-check2" *ngIf="step > 2"></i><ng-container *ngIf="step <= 2">2</ng-container></span>
+    <button
+      type="button"
+      class="step-pill"
+      [class.active]="step === 2"
+      [class.done]="step > 2"
+      (click)="name.trim() && (step = 2)"
+    >
+      <span class="step-num"
+        ><i class="bi bi-check2" *ngIf="step > 2"></i
+        ><ng-container *ngIf="step <= 2">2</ng-container></span
+      >
       <div class="step-text">
         <strong>Contacts & Fichier</strong>
-        <small>{{ activeRows.length ? activeRows.length + ' contact(s) prêts' : 'Excel, CSV ou Saisie' }}</small>
+        <small>{{
+          activeRows.length ? activeRows.length + ' contact(s) prêts' : 'Excel, CSV ou Saisie'
+        }}</small>
       </div>
     </button>
 
-    <button type="button" class="step-pill" [class.active]="step === 3" [class.done]="step > 3" (click)="activeRows.length && (step = 3)">
-      <span class="step-num"><i class="bi bi-check2" *ngIf="step > 3"></i><ng-container *ngIf="step <= 3">3</ng-container></span>
+    <button
+      type="button"
+      class="step-pill"
+      [class.active]="step === 3"
+      [class.done]="step > 3"
+      (click)="activeRows.length && !mappingIssues.length && !analyzingFile && (step = 3)"
+    >
+      <span class="step-num"
+        ><i class="bi bi-check2" *ngIf="step > 3"></i
+        ><ng-container *ngIf="step <= 3">3</ng-container></span
+      >
       <div class="step-text">
         <strong>Message & Design</strong>
-        <small>{{ messageTemplate ? unitsPerMessage + ' unité(s)/contact' : 'Personnalisation' }}</small>
+        <small>{{
+          messageTemplate ? unitsPerMessage + ' unité(s)/contact' : 'Personnalisation'
+        }}</small>
       </div>
     </button>
 
-    <button type="button" class="step-pill" [class.active]="step === 4" (click)="activeRows.length && messageTemplate && (step = 4)">
+    <button
+      type="button"
+      class="step-pill"
+      [class.active]="step === 4"
+      (click)="
+        activeRows.length &&
+          messageTemplate &&
+          !mappingIssues.length &&
+          !unknownMessageVariables.length &&
+          !analyzingFile &&
+          (step = 4)
+      "
+    >
       <span class="step-num">4</span>
       <div class="step-text">
         <strong>Validation & Envoi</strong>
@@ -56,13 +100,14 @@
   <div class="wizard-workspace">
     <!-- Left Column: Active Step -->
     <div class="wizard-main calipso-card p-4 p-lg-5">
-
       <!-- STEP 1: CHANNEL & NAME -->
       <section *ngIf="step === 1" class="step-panel">
         <div class="step-heading">
           <span class="step-badge">Étape 1 sur 4</span>
           <h3>Choisissez votre canal de diffusion</h3>
-          <p>Sélectionnez le canal le plus adapté à votre audience et donnez un nom à votre campagne.</p>
+          <p>
+            Sélectionnez le canal le plus adapté à votre audience et donnez un nom à votre campagne.
+          </p>
         </div>
 
         <div class="channel-cards-grid">
@@ -70,15 +115,21 @@
             type="button"
             class="channel-choice-card sms"
             [class.selected]="channel === 'SMS'"
-            (click)="selectChannel('SMS')">
+            (click)="selectChannel('SMS')"
+          >
             <div class="ch-icon"><i class="bi bi-chat-dots-fill"></i></div>
             <div class="ch-body">
               <div class="d-flex align-items-center justify-content-between">
                 <strong>SMS Pro</strong>
                 <span class="badge badge-soft-primary">Populaire</span>
               </div>
-              <p>Idéal pour les alertes urgentes, relances et promotions rapides. Lu en moins de 3 minutes sans connexion internet.</p>
-              <span class="ch-meta"><i class="bi bi-broadcast"></i> Réseau Orange & Opérateurs</span>
+              <p>
+                Idéal pour les alertes urgentes, relances et promotions rapides. Lu en moins de 3
+                minutes sans connexion internet.
+              </p>
+              <span class="ch-meta"
+                ><i class="bi bi-broadcast"></i> Réseau Orange & Opérateurs</span
+              >
             </div>
           </button>
 
@@ -86,15 +137,21 @@
             type="button"
             class="channel-choice-card whatsapp"
             [class.selected]="channel === 'WHATSAPP'"
-            (click)="selectChannel('WHATSAPP')">
+            (click)="selectChannel('WHATSAPP')"
+          >
             <div class="ch-icon"><i class="bi bi-whatsapp"></i></div>
             <div class="ch-body">
               <div class="d-flex align-items-center justify-content-between">
                 <strong>WhatsApp Business</strong>
                 <span class="badge badge-soft-success">Interactif</span>
               </div>
-              <p>Envoyez des messages enrichis avec visuels, liens cliquables et fort taux d'engagement sur mobile.</p>
-              <span class="ch-meta"><i class="bi bi-patch-check-fill"></i> Passerelle WhatsApp Cloud</span>
+              <p>
+                Envoyez des messages enrichis avec visuels, liens cliquables et fort taux
+                d'engagement sur mobile.
+              </p>
+              <span class="ch-meta"
+                ><i class="bi bi-patch-check-fill"></i> Passerelle WhatsApp Cloud</span
+              >
             </div>
           </button>
 
@@ -102,15 +159,21 @@
             type="button"
             class="channel-choice-card email"
             [class.selected]="channel === 'EMAIL'"
-            (click)="selectChannel('EMAIL')">
+            (click)="selectChannel('EMAIL')"
+          >
             <div class="ch-icon"><i class="bi bi-envelope-paper-heart-fill"></i></div>
             <div class="ch-body">
               <div class="d-flex align-items-center justify-content-between">
                 <strong>Email Marketing</strong>
                 <span class="badge badge-soft-warning">Riche HTML</span>
               </div>
-              <p>Parfait pour vos newsletters, factures détaillées, convocations officielles et communications longues.</p>
-              <span class="ch-meta"><i class="bi bi-layout-text-window-reverse"></i> Design HTML & Bouton CTA</span>
+              <p>
+                Parfait pour vos newsletters, factures détaillées, convocations officielles et
+                communications longues.
+              </p>
+              <span class="ch-meta"
+                ><i class="bi bi-layout-text-window-reverse"></i> Design HTML & Bouton CTA</span
+              >
             </div>
           </button>
         </div>
@@ -121,14 +184,16 @@
             type="text"
             class="form-control form-control-lg"
             [(ngModel)]="name"
-            placeholder="Ex: Relance scolarité Octobre / Promo Fêtes">
+            placeholder="Ex: Relance scolarité Octobre / Promo Fêtes"
+          />
 
           <div class="quick-suggestions mt-2">
             <span>Suggestions :</span>
             <button
               type="button"
               *ngFor="let suggestion of quickCampaignNames"
-              (click)="name = suggestion">
+              (click)="name = suggestion"
+            >
               {{ suggestion }}
             </button>
           </div>
@@ -140,7 +205,8 @@
             type="text"
             class="form-control"
             [(ngModel)]="description"
-            placeholder="Ex: Clients inscrits ce mois-ci à Abidjan">
+            placeholder="Ex: Clients inscrits ce mois-ci à Abidjan"
+          />
         </div>
       </section>
 
@@ -150,22 +216,50 @@
           <span class="step-badge">Étape 2 sur 4</span>
           <h3>Importez vos destinataires en 1 clic</h3>
           <p>
-            Chargez directement votre fichier Excel ou CSV (les colonnes sont détectées automatiquement) ou collez votre liste de contacts.
+            Chargez directement votre fichier Excel ou CSV (les colonnes sont détectées
+            automatiquement) ou collez votre liste de contacts.
           </p>
         </div>
 
+        <div class="header-model-picker mb-4">
+          <label for="campaign-header-model" class="form-label">Modèle d’en-têtes Excel</label>
+          <select
+            id="campaign-header-model"
+            class="form-select"
+            [formControl]="profileControl"
+            [attr.disabled]="submitting || analyzingFile ? '' : null"
+          >
+            <option [ngValue]="0">Import libre — détection automatique</option>
+            @for (profile of profiles(); track profile.id) {
+              <option [ngValue]="profile.id">{{ profile.name }}</option>
+            }
+          </select>
+          <div class="d-flex flex-wrap gap-3 mt-2">
+            <a routerLink="/import-profiles">Gérer les modèles d’en-têtes</a>
+            @if (profileControl.value) {
+              <button type="button" class="btn btn-link p-0" (click)="downloadModel()">
+                Télécharger le modèle Excel vide
+              </button>
+            }
+          </div>
+          @if (loadingProfile()) {
+            <p role="status" class="mt-2">Chargement du modèle…</p>
+          }
+        </div>
         <div class="source-switcher mb-4">
           <button
             type="button"
             [class.active]="audienceSource === 'FILE'"
-            (click)="audienceSource = 'FILE'">
+            (click)="selectAudienceSource('FILE')"
+          >
             <i class="bi bi-file-earmark-spreadsheet-fill"></i>
             Fichier Excel (.xlsx, .xls) ou CSV
           </button>
           <button
             type="button"
             [class.active]="audienceSource === 'MANUAL'"
-            (click)="audienceSource = 'MANUAL'">
+            (click)="selectAudienceSource('MANUAL')"
+          >
             <i class="bi bi-Justify-left"></i>
             Copier-coller / Saisie rapide
           </button>
@@ -178,13 +272,22 @@
             </div>
             <h4>Glissez votre fichier Excel ou CSV ici</h4>
             <p>
-              Pas besoin de configurer des variables à l'avance : Calipso détecte automatiquement vos colonnes (Téléphone, Email, Prénom, Montant...).
+              Importez vos contacts, puis vérifiez les colonnes détectées et les correspondances
+              avec votre modèle.
             </p>
             <div class="d-flex flex-wrap justify-content-center gap-3 mt-3">
-              <label class="btn-atlas mb-0" style="cursor: pointer;">
+              <label class="btn-atlas mb-0" style="cursor: pointer">
                 <i class="bi bi-folder2-open"></i>
-                <span>{{ analyzingFile ? 'Analyse en cours...' : 'Choisir un fichier Excel / CSV' }}</span>
-                <input type="file" class="d-none" accept=".xlsx,.xls,.csv" (change)="onFileSelected($event)">
+                <span>{{
+                  analyzingFile ? 'Analyse en cours...' : 'Choisir un fichier Excel / CSV'
+                }}</span>
+                <input
+                  type="file"
+                  class="d-none"
+                  accept=".xlsx,.xls,.csv"
+                  (change)="onFileSelected($event)"
+                  [disabled]="analyzingFile"
+                />
               </label>
 
               <a [href]="campaignService.sampleExcelUrl" target="_blank" class="btn-ghost">
@@ -200,12 +303,78 @@
           </div>
         </div>
 
+        @if (selectedFile && audienceSource === 'FILE') {
+          <div class="header-model-picker my-3">
+            <p>{{ selectedFile.name }}</p>
+            <div class="row g-3 align-items-end">
+              <div class="col-sm-4">
+                <label for="campaign-sheet" class="form-label">Feuille</label>
+                @if (analysis?.sheetNames?.length) {
+                  <select
+                    id="campaign-sheet"
+                    class="form-select"
+                    [formControl]="sheetNumberControl"
+                  >
+                    @for (sheet of analysis?.sheetNames; track $index) {
+                      <option [ngValue]="$index + 1">{{ sheet }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input
+                    id="campaign-sheet"
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="form-control"
+                    [formControl]="sheetNumberControl"
+                  />
+                }
+              </div>
+              <div class="col-sm-4">
+                <label for="campaign-header-row" class="form-label">Ligne des en-têtes</label
+                ><input
+                  id="campaign-header-row"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="form-control"
+                  [formControl]="headerRowControl"
+                />
+              </div>
+              <div class="col-sm-4">
+                <button
+                  type="button"
+                  class="btn btn-outline-primary"
+                  (click)="reanalyzeFile()"
+                  [disabled]="analyzingFile"
+                >
+                  Relire le fichier
+                </button>
+              </div>
+            </div>
+            @if (fileOptionsPending) {
+              <p class="text-danger mt-2" role="status">
+                Cliquez sur « Relire le fichier » pour appliquer la feuille et la ligne choisies.
+              </p>
+            }
+          </div>
+        }
         <div *ngIf="audienceSource === 'MANUAL'" class="manual-box">
           <div class="d-flex align-items-center justify-content-between mb-2">
             <label class="form-label mb-0">
-              Collez vos contacts (1 par ligne : <code>{{ channel === 'EMAIL' ? 'Email ; Prénom ; Nom ; Montant' : 'Téléphone ; Prénom ; Nom ; Montant' }}</code>)
+              Collez vos contacts (1 par ligne :
+              <code>{{
+                channel === 'EMAIL'
+                  ? 'Email ; Prénom ; Nom ; Montant'
+                  : 'Téléphone ; Prénom ; Nom ; Montant'
+              }}</code
+              >)
             </label>
-            <button type="button" class="btn btn-sm btn-link text-decoration-none" (click)="loadDemoContacts()">
+            <button
+              type="button"
+              class="btn btn-sm btn-link text-decoration-none"
+              (click)="loadDemoContacts()"
+            >
               <i class="bi bi-magic"></i> Remplir avec un exemple
             </button>
           </div>
@@ -214,26 +383,86 @@
             rows="6"
             [(ngModel)]="manualContactsText"
             (ngModelChange)="parseManualContacts()"
-            [placeholder]="channel === 'EMAIL' ? 'client@domaine.ci; Awa; Kouassi; 25 000 FCFA' : '+2250708091011; Awa; Kouassi; 25 000 FCFA'"></textarea>
+            [placeholder]="
+              channel === 'EMAIL'
+                ? 'client@domaine.ci; Awa; Kouassi; 25 000 FCFA'
+                : '+2250708091011; Awa; Kouassi; 25 000 FCFA'
+            "
+          ></textarea>
         </div>
 
+        @if (profileControl.value && analysis) {
+          <div class="header-model-picker my-3">
+            <h4 class="h6">Correspondance des colonnes</h4>
+            <p>
+              Associez chaque variable à une colonne de votre fichier. L’ordre des colonnes peut
+              varier.
+            </p>
+            @for (column of profileColumns(); track column.id) {
+              <div class="row g-2 align-items-center mb-2">
+                <label class="col-sm-5" [for]="'mapping-' + column.code"
+                  >{{ column.headerName || column.code }} → {{ '{{' + column.code + '}}' }}
+                  {{ column.required ? '*' : '' }}</label
+                >
+                <div class="col-sm-7">
+                  <select
+                    class="form-select"
+                    [id]="'mapping-' + column.code"
+                    [formControl]="columnMapping.controls[column.code]"
+                  >
+                    <option value="">Ne pas associer</option>
+                    @for (header of analysis.headers; track header) {
+                      <option [value]="header">
+                        {{ analysis.headerLabels?.[header] || header }}
+                      </option>
+                    }
+                  </select>
+                </div>
+              </div>
+            }
+            <small>* Colonne obligatoire. Dates : AAAA-MM-JJ ou JJ/MM/AAAA.</small>
+          </div>
+          @if (mappingIssues.length) {
+            <div class="alert alert-danger" role="alert">
+              <strong>À corriger avant de continuer :</strong>
+              <ul class="mb-0">
+                @for (issue of mappingIssues; track $index) {
+                  <li>{{ issue }}</li>
+                }
+              </ul>
+            </div>
+          }
+        }
         <!-- Detection Summary & Column Picker -->
         <div class="analysis-result mt-4" *ngIf="analysis && analysis.totalRows > 0">
           <div class="analysis-banner">
             <div class="d-flex align-items-center gap-3">
               <div class="check-circle"><i class="bi bi-check-lg"></i></div>
               <div>
-                <strong>{{ analysis.totalRows }} destinataire(s) détecté(s) dans "{{ analysis.fileName }}"</strong>
-                <span>{{ analysis.headers.length }} colonnes reconnues et utilisables pour personnaliser votre message.</span>
+                <strong
+                  >{{ analysis.totalRows }} destinataire(s) détecté(s) dans "{{
+                    analysis.fileName
+                  }}"</strong
+                >
+                <span
+                  >{{ analysis.headers.length }} colonnes reconnues et utilisables pour
+                  personnaliser votre message.</span
+                >
               </div>
             </div>
 
             <div class="recipient-col-selector">
               <label class="form-label mb-1">
-                Colonne contenant {{ channel === 'EMAIL' ? 'l\'adresse Email' : 'le numéro de Téléphone' }} :
+                Colonne contenant
+                {{ channel === 'EMAIL' ? "l'adresse Email" : 'le numéro de Téléphone' }} :
               </label>
-              <select class="form-select form-select-sm" [(ngModel)]="recipientColumn">
-                <option *ngFor="let col of analysis.headers" [ngValue]="col">{{ col }}</option>
+              <select
+                class="form-select form-select-sm"
+                [(ngModel)]="recipientColumn"
+                (ngModelChange)="validateMappedRows()"
+                [disabled]="profileControl.value > 0 && channel !== 'EMAIL'"
+              >
+                <option *ngFor="let col of availableColumns" [ngValue]="col">{{ col }}</option>
               </select>
             </div>
           </div>
@@ -242,15 +471,17 @@
             <table class="table table-sm align-middle preview-table mb-0">
               <thead>
                 <tr>
-                  <th *ngFor="let col of analysis.headers">
+                  <th *ngFor="let col of availableColumns">
                     {{ col }}
-                    <span class="badge badge-soft-primary ms-1" *ngIf="col === recipientColumn">Cible {{ channel }}</span>
+                    <span class="badge badge-soft-primary ms-1" *ngIf="col === recipientColumn"
+                      >Cible {{ channel }}</span
+                    >
                   </th>
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let row of analysis.sampleRows.slice(0, 5)">
-                  <td *ngFor="let col of analysis.headers">{{ row[col] || '-' }}</td>
+                <tr *ngFor="let row of activeRows.slice(0, 5)">
+                  <td *ngFor="let col of availableColumns">{{ row[col] ?? '-' }}</td>
                 </tr>
               </tbody>
             </table>
@@ -263,20 +494,46 @@
         <div class="step-heading">
           <span class="step-badge">Étape 3 sur 4</span>
           <h3>Composez et personnalisez votre message</h3>
-          <p>Inspirez-vous d'un modèle prêt à l'emploi ou insérez les colonnes de votre fichier en un clic.</p>
+          <p>
+            Inspirez-vous d'un modèle prêt à l'emploi ou insérez les colonnes de votre fichier en un
+            clic.
+          </p>
         </div>
 
+        @if (profileMessages().length) {
+          <div class="header-model-picker mb-3">
+            <h4 class="h6">Messages associés au modèle</h4>
+            <div class="d-flex flex-wrap gap-2">
+              @for (message of profileMessages(); track message.id) {
+                <button
+                  type="button"
+                  class="btn btn-outline-primary"
+                  (click)="messageTemplate = message.content"
+                >
+                  {{ message.name }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+        @if (unknownMessageVariables.length) {
+          <div class="alert alert-danger" role="alert">
+            Variables sans correspondance : {{ unknownMessageVariables.join(', ') }}
+          </div>
+        }
         <!-- Starter Templates Strip -->
         <div class="starter-templates-box mb-4">
           <span class="small fw-bold text-uppercase text-muted d-block mb-2">
-            <i class="bi bi-Bookmark-star-fill text-primary me-1"></i> Modèles prêts à l'emploi (cliquez pour appliquer) :
+            <i class="bi bi-Bookmark-star-fill text-primary me-1"></i> Modèles prêts à l'emploi
+            (cliquez pour appliquer) :
           </span>
           <div class="starter-grid">
             <button
               type="button"
               class="starter-chip"
               *ngFor="let tpl of starterTemplates"
-              (click)="applyStarterTemplate(tpl)">
+              (click)="applyStarterTemplate(tpl)"
+            >
               <strong>{{ tpl.title }}</strong>
               <small>{{ tpl.category }}</small>
             </button>
@@ -290,18 +547,22 @@
             type="text"
             class="form-control"
             [(ngModel)]="emailSubject"
-            [placeholder]="'Ex: Bonjour {{PRENOM}}, votre facture est disponible'">
+            [placeholder]="'Ex: Bonjour {{PRENOM}}, votre facture est disponible'"
+          />
         </div>
 
         <!-- Dynamic Variables Toolbar -->
         <div class="variables-bar mb-2">
-          <span class="var-label"><i class="bi bi-braces"></i> Insérer une donnée personnalisée :</span>
+          <span class="var-label"
+            ><i class="bi bi-braces"></i> Insérer une donnée personnalisée :</span
+          >
           <div class="var-chips">
             <button
               type="button"
               class="var-chip"
               *ngFor="let col of availableColumns"
-              (click)="insertVariable(col)">
+              (click)="insertVariable(col)"
+            >
               + {{ '{{' + col + '}}' }}
             </button>
           </div>
@@ -311,32 +572,49 @@
           class="form-control message-textarea"
           rows="6"
           [(ngModel)]="messageTemplate"
-          [placeholder]="'Bonjour {{PRENOM}}, écrivez votre message ici...'"></textarea>
+          [placeholder]="'Bonjour {{PRENOM}}, écrivez votre message ici...'"
+        ></textarea>
 
         <div class="composer-footer mt-2">
-          <span><strong>{{ livePreviewMessage.length }}</strong> caractères</span>
-          <span><strong>{{ unitsPerMessage }}</strong> {{ channel === 'SMS' ? 'segment(s) SMS' : 'crédit' }} par destinataire</span>
-          <span>Coût total estimé : <strong>{{ totalEstimatedCredits }} crédit(s)</strong></span>
+          <span
+            ><strong>{{ livePreviewMessage.length }}</strong> caractères</span
+          >
+          <span
+            ><strong>{{ unitsPerMessage }}</strong>
+            {{ channel === 'SMS' ? 'segment(s) SMS' : 'crédit' }} par destinataire</span
+          >
+          <span
+            >Coût total estimé : <strong>{{ totalEstimatedCredits }} crédit(s)</strong></span
+          >
         </div>
 
         <!-- Rich Options for WhatsApp / Email -->
         <div class="rich-options-box mt-4" *ngIf="channel === 'WHATSAPP' || channel === 'EMAIL'">
           <h6 class="fw-bold mb-3">
             <i class="bi bi-stars text-primary me-1"></i>
-            Enrichissement {{ channel === 'WHATSAPP' ? 'WhatsApp Business' : 'Email HTML' }} (optionnel)
+            Enrichissement
+            {{ channel === 'WHATSAPP' ? 'WhatsApp Business' : 'Email HTML' }} (optionnel)
           </h6>
           <div class="row g-3">
             <div class="col-md-4">
               <label class="form-label">Texte du bouton d'action</label>
-              <input class="form-control" [(ngModel)]="ctaLabel" placeholder="Ex: Payer en ligne / Voir l'offre">
+              <input
+                class="form-control"
+                [(ngModel)]="ctaLabel"
+                placeholder="Ex: Payer en ligne / Voir l'offre"
+              />
             </div>
             <div class="col-md-4">
               <label class="form-label">Lien du bouton (URL)</label>
-              <input class="form-control" [(ngModel)]="ctaUrl" placeholder="https://...">
+              <input class="form-control" [(ngModel)]="ctaUrl" placeholder="https://..." />
             </div>
             <div class="col-md-4">
               <label class="form-label">Image / Média d'en-tête (URL)</label>
-              <input class="form-control" [(ngModel)]="mediaUrl" placeholder="https://.../image.jpg">
+              <input
+                class="form-control"
+                [(ngModel)]="mediaUrl"
+                placeholder="https://.../image.jpg"
+              />
             </div>
           </div>
         </div>
@@ -347,7 +625,10 @@
         <div class="step-heading">
           <span class="step-badge">Étape 4 sur 4</span>
           <h3>Vérification finale avant diffusion</h3>
-          <p>Contrôlez les paramètres de votre campagne et lancez l'envoi immédiat ou sauvegardez en brouillon.</p>
+          <p>
+            Contrôlez les paramètres de votre campagne et lancez l'envoi immédiat ou sauvegardez en
+            brouillon.
+          </p>
         </div>
 
         <div class="review-summary-grid">
@@ -367,10 +648,15 @@
             <strong>{{ totalEstimatedCredits }} crédit(s)</strong>
             <small>{{ unitsPerMessage }} unité(s) × {{ activeRows.length }}</small>
           </div>
-          <div class="review-tile" [class.insufficient]="totalEstimatedCredits > currentCompanyBalance()">
+          <div
+            class="review-tile"
+            [class.insufficient]="totalEstimatedCredits > currentCompanyBalance()"
+          >
             <span>Votre solde actuel</span>
-            <strong>{{ currentCompanyBalance() | number:'1.0-0' }} crédit(s)</strong>
-            <small *ngIf="totalEstimatedCredits <= currentCompanyBalance()" class="text-success">Solde suffisant ✓</small>
+            <strong>{{ currentCompanyBalance() | number: '1.0-0' }} crédit(s)</strong>
+            <small *ngIf="totalEstimatedCredits <= currentCompanyBalance()" class="text-success"
+              >Solde suffisant ✓</small
+            >
             <small *ngIf="totalEstimatedCredits > currentCompanyBalance()" class="text-danger">
               Solde insuffisant (<a routerLink="/subscription">Recharger</a>)
             </small>
@@ -381,11 +667,14 @@
           <h6 class="fw-bold mb-3">Aperçu des messages générés pour vos contacts :</h6>
           <div class="sample-msg-row" *ngFor="let row of activeRows.slice(0, 4)">
             <div class="sample-target">
-              <i class="bi" [ngClass]="{
-                'bi-chat-dots-fill text-primary': channel === 'SMS',
-                'bi-whatsapp text-success': channel === 'WHATSAPP',
-                'bi-envelope-fill text-purple': channel === 'EMAIL'
-              }"></i>
+              <i
+                class="bi"
+                [ngClass]="{
+                  'bi-chat-dots-fill text-primary': channel === 'SMS',
+                  'bi-whatsapp text-success': channel === 'WHATSAPP',
+                  'bi-envelope-fill text-purple': channel === 'EMAIL',
+                }"
+              ></i>
               <strong>{{ row[recipientColumn] || 'Numéro/Email manquant' }}</strong>
             </div>
             <div class="sample-body">
@@ -396,23 +685,22 @@
       </section>
 
       <!-- Step Navigation Footer -->
-      <footer class="wizard-actions mt-4 pt-3 border-top d-flex align-items-center justify-content-between">
+      <footer
+        class="wizard-actions mt-4 pt-3 border-top d-flex align-items-center justify-content-between"
+      >
         <button
           type="button"
           class="btn-ghost"
           *ngIf="step > 1"
           (click)="prevStep()"
-          [disabled]="submitting">
+          [disabled]="submitting"
+        >
           <i class="bi bi-arrow-left"></i>
           Étape précédente
         </button>
         <div *ngIf="step === 1"></div>
 
-        <button
-          type="button"
-          class="btn-atlas px-4"
-          *ngIf="step < 4"
-          (click)="nextStep()">
+        <button type="button" class="btn-atlas px-4" *ngIf="step < 4" (click)="nextStep()">
           <span>Continuer</span>
           <i class="bi bi-arrow-right"></i>
         </button>
@@ -421,8 +709,11 @@
           <button
             type="button"
             class="btn-ghost"
-            [disabled]="submitting"
-            (click)="submitWizard(false)">
+            [disabled]="
+              submitting || mappingIssues.length > 0 || unknownMessageVariables.length > 0
+            "
+            (click)="submitWizard(false)"
+          >
             <i class="bi bi-floppy"></i>
             Enregistrer en brouillon
           </button>
@@ -430,10 +721,18 @@
           <button
             type="button"
             class="btn-atlas px-4"
-            [disabled]="submitting || totalEstimatedCredits > currentCompanyBalance()"
-            (click)="submitWizard(true)">
+            [disabled]="
+              submitting ||
+              mappingIssues.length > 0 ||
+              unknownMessageVariables.length > 0 ||
+              totalEstimatedCredits > currentCompanyBalance()
+            "
+            (click)="submitWizard(true)"
+          >
             <i class="bi bi-send-check-fill"></i>
-            <span>{{ submitting ? 'Diffusion en cours...' : 'Lancer la campagne maintenant' }}</span>
+            <span>{{
+              submitting ? 'Diffusion en cours...' : 'Lancer la campagne maintenant'
+            }}</span>
           </button>
         </div>
       </footer>
@@ -445,11 +744,14 @@
         <div class="d-flex align-items-center justify-content-between mb-2 px-1">
           <span class="small fw-bold text-muted text-uppercase">Aperçu en direct</span>
           <span class="channel-pill" [ngClass]="channel.toLowerCase()">
-            <i class="bi" [ngClass]="{
-              'bi-chat-dots-fill': channel === 'SMS',
-              'bi-whatsapp': channel === 'WHATSAPP',
-              'bi-envelope-fill': channel === 'EMAIL'
-            }"></i>
+            <i
+              class="bi"
+              [ngClass]="{
+                'bi-chat-dots-fill': channel === 'SMS',
+                'bi-whatsapp': channel === 'WHATSAPP',
+                'bi-envelope-fill': channel === 'EMAIL',
+              }"
+            ></i>
             {{ channel }}
           </span>
         </div>
@@ -469,11 +771,14 @@
           <!-- Header inside phone -->
           <div class="phone-app-header">
             <div class="phone-avatar">
-              <i class="bi" [ngClass]="{
-                'bi-building': channel === 'SMS',
-                'bi-whatsapp': channel === 'WHATSAPP',
-                'bi-envelope-paper-fill': channel === 'EMAIL'
-              }"></i>
+              <i
+                class="bi"
+                [ngClass]="{
+                  'bi-building': channel === 'SMS',
+                  'bi-whatsapp': channel === 'WHATSAPP',
+                  'bi-envelope-paper-fill': channel === 'EMAIL',
+                }"
+              ></i>
             </div>
             <div class="phone-contact">
               <strong>{{ workspace.activeCompany()?.name || 'Calipso Info' }}</strong>
@@ -492,7 +797,10 @@
                 <i class="bi bi-image"></i> Média joint
               </div>
               <div class="bubble-text">{{ livePreviewMessage }}</div>
-              <div class="bubble-cta" *ngIf="(channel === 'WHATSAPP' || channel === 'EMAIL') && (ctaLabel || ctaUrl)">
+              <div
+                class="bubble-cta"
+                *ngIf="(channel === 'WHATSAPP' || channel === 'EMAIL') && (ctaLabel || ctaUrl)"
+              >
                 <i class="bi bi-box-arrow-up-right"></i> {{ ctaLabel || 'Découvrir' }}
               </div>
               <div class="bubble-meta">
@@ -509,7 +817,11 @@
             <i class="bi bi-chevron-left"></i>
           </button>
           <span>Contact {{ previewRowIndex + 1 }} / {{ activeRows.length }}</span>
-          <button type="button" (click)="nextPreviewRow()" [disabled]="previewRowIndex >= activeRows.length - 1">
+          <button
+            type="button"
+            (click)="nextPreviewRow()"
+            [disabled]="previewRowIndex >= activeRows.length - 1"
+          >
             <i class="bi bi-chevron-right"></i>
           </button>
         </div>

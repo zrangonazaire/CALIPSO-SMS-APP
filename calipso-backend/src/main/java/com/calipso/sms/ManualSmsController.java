@@ -1,5 +1,7 @@
 package com.calipso.sms;
 
+import com.calipso.auth.CompanyAccess;
+
 import com.calipso.campaign.CampaignChannel;
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
@@ -20,6 +22,8 @@ import java.util.List;
 @Slf4j
 public class ManualSmsController {
 
+    private final CompanyAccess access;
+
     private final CompanyRepository companyRepository;
     private final SmsMessageService smsMessageService;
     private final SmsSendHistoryRepository historyRepository;
@@ -28,6 +32,7 @@ public class ManualSmsController {
 
     @PostMapping("/send")
     public ManualSmsResponse send(@RequestBody @Valid ManualSmsRequest request) {
+        access.requireCompany(request.companyId());
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
 

@@ -18,7 +18,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   if (!token || isAuthEndpoint) {
     return next(request).pipe(
       catchError((error) => {
-        if (request.url.includes('/api/v1/') && !isAuthEndpoint && (error.status === 401 || error.status === 403)) {
+        if (request.url.includes('/api/v1/') && !isAuthEndpoint && error.status === 401) {
           auth.clearSession();
           router.navigateByUrl('/login');
         }
@@ -36,7 +36,7 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
 
   return next(authenticatedRequest).pipe(
     catchError((error) => {
-      if (request.url.includes('/api/v1/') && (error.status === 401 || error.status === 403)) {
+      if (request.url.includes('/api/v1/') && error.status === 401) {
         auth.clearSession();
         router.navigateByUrl('/login');
       }

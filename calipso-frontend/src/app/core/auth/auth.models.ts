@@ -37,6 +37,7 @@ export interface ChangePasswordRequest {
 }
 
 export interface AuthUser {
+  platformAdmin?: boolean;
   id: number;
   companyId: number;
   companyName: string;

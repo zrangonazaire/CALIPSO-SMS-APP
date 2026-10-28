@@ -1,11 +1,11 @@
 <header class="topbar">
   <div class="topbar-left">
-    <div class="workspace-pill" *ngIf="workspace.companies().length <= 1">
+    <div class="workspace-pill" *ngIf="!workspace.isPlatformAdmin() || workspace.companies().length <= 1">
       <span class="workspace-dot"></span>
       <strong>{{ workspace.activeCompany()?.name || auth.currentUser()?.companyName || 'Mon Espace' }}</strong>
     </div>
 
-    <div class="workspace-switcher" *ngIf="workspace.companies().length > 1">
+    <div class="workspace-switcher" *ngIf="workspace.isPlatformAdmin() && workspace.companies().length > 1">
       <i class="bi bi-building text-primary"></i>
       <select
         class="workspace-select"

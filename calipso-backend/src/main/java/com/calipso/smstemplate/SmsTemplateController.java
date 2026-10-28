@@ -1,5 +1,7 @@
 package com.calipso.smstemplate;
 
+import com.calipso.auth.CompanyAccess;
+
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
 import com.calipso.importprofile.ExcelImportProfile;
@@ -14,6 +16,8 @@ import java.util.List;
 @RequestMapping("/api/v1/sms-templates")
 @RequiredArgsConstructor
 public class SmsTemplateController {
+
+    private final CompanyAccess access;
 
     private final SmsTemplateRepository templateRepository;
     private final ExcelImportProfileRepository profileRepository;
@@ -32,10 +36,12 @@ public class SmsTemplateController {
         } else if (profile != null) {
             company = profile.getCompany();
         } else {
-            company = companyRepository.findAll().stream().findFirst()
+            company = companyRepository.findById(access.currentUser().getCompany().getId())
                     .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
         }
 
+        access.requireCompany(company);
+        if (profile != null) access.requireSameCompany(company, profile.getCompany());
         SmsTemplate template = SmsTemplate.builder()
                 .company(company)
                 .profile(profile)
@@ -49,11 +55,19 @@ public class SmsTemplateController {
 
     @GetMapping("/profile/{profileId}")
     public List<SmsTemplate> findByProfile(@PathVariable Long profileId) {
-        return templateRepository.findByProfileIdAndActiveTrue(profileId);
+        var profile = access.requireProfile(profileId);
+        var templates = templateRepository.findByProfileIdAndActiveTrue(profileId);
+        templates.forEach(template -> access.requireSameCompany(profile.getCompany(), template.getCompany()));
+        return templates;
     }
 
     @GetMapping("/company/{companyId}")
     public List<SmsTemplate> findByCompany(@PathVariable Long companyId) {
-        return templateRepository.findByCompanyIdAndActiveTrueOrderByCreatedAtDesc(companyId);
+        access.requireCompany(companyId);
+        var templates = templateRepository.findByCompanyIdAndActiveTrueOrderByCreatedAtDesc(companyId);
+        templates.forEach(template -> {
+            if (template.getProfile() != null) access.requireSameCompany(template.getCompany(), template.getProfile().getCompany());
+        });
+        return templates;
     }
 }

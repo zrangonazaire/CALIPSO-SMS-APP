@@ -7,10 +7,16 @@
         Choisissez un modèle prêt à l'emploi et lancez votre campagne en 1 clic avec vos variables personnalisées.
       </p>
     </div>
-    <a routerLink="/campaigns/create" class="btn-atlas">
-      <i class="bi bi-magic"></i>
-      Nouvelle campagne
-    </a>
+    <div class="d-flex flex-wrap gap-2">
+      <a routerLink="/import-profiles" class="btn-ghost">
+        <i class="bi bi-file-earmark-spreadsheet"></i>
+        Configurer les en-têtes SMS
+      </a>
+      <a routerLink="/campaigns/create" class="btn-atlas">
+        <i class="bi bi-magic"></i>
+        Nouvelle campagne
+      </a>
+    </div>
   </header>
 
   <div class="alert alert-success rounded-3" *ngIf="success">{{ success }}</div>

@@ -2,6 +2,11 @@
 server:
   port: ${SERVER_PORT:8085}
 
+calipso:
+  security:
+    platform-admin-user-ids: ${CALIPSO_PLATFORM_ADMIN_USER_IDS:}
+    payment-webhook-secret: ${CALIPSO_PAYMENT_WEBHOOK_SECRET:}
+
 spring:
   config:
     import:

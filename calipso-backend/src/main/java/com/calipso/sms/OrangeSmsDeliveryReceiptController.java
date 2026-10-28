@@ -1,7 +1,10 @@
 package com.calipso.sms;
 
+import com.calipso.auth.CompanyAccess;
+
 import com.calipso.recipient.RecipientStatus;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/orange/sms-delivery-receipts")
@@ -20,11 +24,15 @@ import java.util.List;
 @Slf4j
 public class OrangeSmsDeliveryReceiptController {
 
+    private final CompanyAccess access;
+
     private final SmsSendHistoryRepository historyRepository;
 
     @PostMapping
     @Transactional
-    public ResponseEntity<Void> receive(@RequestBody JsonNode payload) {
+    public ResponseEntity<Void> receive(@RequestBody Map<String, Object> body) {
+        access.requirePlatformAdmin();
+        JsonNode payload = new ObjectMapper().valueToTree(body);
         JsonNode notification = payload.path("deliveryInfoNotification");
         String deliveryCallbackData = textOrNull(notification.path("callbackData"));
         String deliveryStatus = textOrNull(notification.path("deliveryInfo").path("deliveryStatus"));

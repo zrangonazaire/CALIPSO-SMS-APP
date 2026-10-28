@@ -9,6 +9,8 @@ public interface ExcelVariableRepository extends JpaRepository<ExcelVariable, Lo
 
     List<ExcelVariable> findByProfileIdAndActiveTrue(Long profileId);
 
+    List<ExcelVariable> findByProfileIdAndActiveTrueOrderByColumnOrderAscIdAsc(Long profileId);
+
     Optional<ExcelVariable> findByProfileIdAndCode(Long profileId, String code);
 
     List<ExcelVariable> findByProfileIdAndPhoneTrueAndActiveTrue(Long profileId);

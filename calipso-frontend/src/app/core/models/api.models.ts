@@ -45,6 +45,8 @@ export interface ExcelVariable {
   id?: number;
   profileId?: number;
   profile?: ImportProfile;
+  headerName?: string;
+  columnOrder?: number;
   code: string;
   label: string;
   dataType: DataType;
@@ -103,9 +105,24 @@ export interface FileAnalysisResponse {
   totalRows: number;
   sampleRows: Record<string, unknown>[];
   allRows: Record<string, unknown>[];
+  headerLabels?: Record<string, string>;
+  sheetNames?: string[];
+  sheetIndex?: number;
+  headerRow?: number;
+}
+
+export interface HeaderModelRequest {
+  companyId: number;
+  name: string;
+  description?: string;
+  columns: ExcelVariable[];
 }
 
 export interface WizardCampaignRequest {
+  sheetIndex?: number;
+  headerRow?: number;
+  profileId?: number;
+  columnMapping?: Record<string, string>;
   companyId: number;
   name: string;
   description?: string;
@@ -159,7 +176,13 @@ export type SmsSendSource = 'CAMPAIGN' | 'MANUAL';
 export type SubscriptionPlanCode = 'ESSENTIEL' | 'STANDARD' | 'AVANCE' | 'VOLUME';
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 export type WalletTransactionType = 'CREDIT' | 'DEBIT' | 'REFUND';
-export type PaymentMethod = 'WAVE_CI' | 'ORANGE_MONEY_CI' | 'MTN_MOMO_CI' | 'MOOV_MONEY_CI' | 'CARD' | 'SYSTEM';
+export type PaymentMethod =
+  | 'WAVE_CI'
+  | 'ORANGE_MONEY_CI'
+  | 'MTN_MOMO_CI'
+  | 'MOOV_MONEY_CI'
+  | 'CARD'
+  | 'SYSTEM';
 export type PaymentStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
 
 export interface SmsSendHistory {

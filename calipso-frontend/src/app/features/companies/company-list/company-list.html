@@ -35,7 +35,7 @@
       <button type="button" [class.active]="activeTab === 'company'" (click)="activeTab = 'company'">
         <i class="bi bi-sliders me-1"></i> Paramètres de l'organisation
       </button>
-      <button type="button" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">
+      <button type="button" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'" *ngIf="workspace.canManageTeam()">
         <i class="bi bi-people-fill me-1"></i> Membres de l'équipe ({{ users.length }})
       </button>
       <button type="button" [class.active]="activeTab === 'security'" (click)="activeTab = 'security'">
@@ -43,7 +43,7 @@
       </button>
       <button
         type="button"
-        *ngIf="workspace.isAdmin()"
+        *ngIf="workspace.isPlatformAdmin()"
         [class.active]="activeTab === 'admin-companies'"
         (click)="activeTab = 'admin-companies'">
         <i class="bi bi-buildings me-1"></i> Administration Multi-Sociétés ({{ companies.length }})
@@ -84,7 +84,7 @@
     </section>
 
     <!-- TAB 2: GESTION DES UTILISATEURS & RÉINITIALISATION MDP -->
-    <section *ngIf="activeTab === 'users'">
+    <section *ngIf="activeTab === 'users' && workspace.canManageTeam()">
       <div class="row g-4">
         <div class="col-lg-4">
           <div class="p-3 rounded-4 border bg-light">
@@ -275,7 +275,7 @@
     </section>
 
     <!-- TAB 4: MULTI-SOCIÉTÉS (ADMIN) -->
-    <section *ngIf="activeTab === 'admin-companies'">
+    <section *ngIf="activeTab === 'admin-companies' && workspace.isPlatformAdmin()">
       <div class="row g-4">
         <div class="col-lg-5">
           <h5 class="fw-bold mb-3">Créer un nouveau compte client</h5>

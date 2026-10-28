@@ -67,8 +67,10 @@ export class AuthService {
   }
 
   loadMe(): Observable<AuthUser> {
+    const sessionToken = this.token;
     return this.http.get<AuthUser>(`${this.apiUrl}/me`).pipe(
       tap((user) => {
+        if (sessionToken !== this.token || !sessionToken) return;
         this.currentUser.set(user);
         localStorage.setItem(this.userKey, JSON.stringify(user));
       })

@@ -1,5 +1,7 @@
 package com.calipso.sms;
 
+import com.calipso.auth.CompanyAccess;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,10 +13,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class SmsApiController {
 
+    private final CompanyAccess access;
+
     private final SmsApiDashboardService dashboardService;
 
     @GetMapping("/company/{companyId}/dashboard")
     public SmsApiDashboardResponse getDashboard(@PathVariable Long companyId) {
+        access.requireCompany(companyId);
         return dashboardService.getDashboard(companyId);
     }
 }

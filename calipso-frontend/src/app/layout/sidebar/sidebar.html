@@ -22,12 +22,22 @@
     <div class="nav-group">
       <span class="nav-group-label">Campagnes & Envois</span>
 
-      <a routerLink="/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+      >
         <i class="bi bi-grid-1x2-fill"></i>
         <span>Vue d'ensemble</span>
       </a>
 
-      <a routerLink="/campaigns" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+      <a
+        routerLink="/campaigns"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+      >
         <i class="bi bi-megaphone-fill"></i>
         <span>Mes campagnes</span>
       </a>
@@ -45,6 +55,11 @@
       <a routerLink="/sms-templates" routerLinkActive="active" class="nav-item">
         <i class="bi bi-collection-fill"></i>
         <span>Modèles de messages</span>
+      </a>
+
+      <a routerLink="/import-profiles" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+        <span>En-têtes SMS / Excel</span>
       </a>
 
       <a routerLink="/sms-history" routerLinkActive="active" class="nav-item">
@@ -82,7 +97,9 @@
         <i class="bi bi-envelope-fill" style="color: #7c3aed" title="Email"></i>
       </span>
     </div>
-    <div class="wallet-amount">{{ company.smsBalance || 0 | number:'1.0-0' }} <small>crédits</small></div>
+    <div class="wallet-amount">
+      {{ company.smsBalance || 0 | number: '1.0-0' }} <small>crédits</small>
+    </div>
     <a routerLink="/subscription" class="wallet-recharge-link">
       <i class="bi bi-plus-circle-fill"></i> Recharger mon compte
     </a>

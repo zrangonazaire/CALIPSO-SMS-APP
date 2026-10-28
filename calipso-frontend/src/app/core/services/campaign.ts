@@ -20,9 +20,11 @@ export class CampaignService {
     return this.http.post<Campaign>(this.apiUrl, campaign);
   }
 
-  analyzeFile(file: File): Observable<FileAnalysisResponse> {
+  analyzeFile(file: File, sheetIndex = 0, headerRow = 1): Observable<FileAnalysisResponse> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('sheetIndex', String(sheetIndex));
+    formData.append('headerRow', String(headerRow));
     return this.http.post<FileAnalysisResponse>(`${this.apiUrl}/analyze-file`, formData);
   }
 

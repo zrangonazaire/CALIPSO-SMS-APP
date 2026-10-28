@@ -40,6 +40,10 @@ public class ExcelVariable {
     @Column(nullable = false)
     private String label;
 
+    private String headerName;
+
+    private Integer columnOrder;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DataType dataType;

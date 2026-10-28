@@ -15,6 +15,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final CompanyAccess access;
 
     @PostMapping("/login")
     public LoginResponse login(@RequestBody @Valid LoginRequest request) {
@@ -52,7 +53,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public AuthUserResponse me(@AuthenticationPrincipal CompanyUser user) {
-        return AuthUserResponse.from(user);
+        return AuthUserResponse.from(user, access.isPlatformAdmin(user));
     }
 
     @PostMapping("/logout")

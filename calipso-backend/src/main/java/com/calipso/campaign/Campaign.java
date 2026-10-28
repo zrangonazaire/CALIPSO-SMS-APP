@@ -1,6 +1,9 @@
 package com.calipso.campaign;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Type;
+import io.hypersistence.utils.hibernate.type.json.JsonType;
+import java.util.Map;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -50,6 +53,10 @@ public class Campaign {
     private String emailSubject;
 
     private String recipientColumn;
+
+    @Type(JsonType.class)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Object> importConfiguration;
 
     private String mediaUrl;
 

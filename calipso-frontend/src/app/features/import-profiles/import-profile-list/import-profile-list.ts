@@ -1,316 +1,421 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Company, DataType, ExcelVariable, ImportProfile, SmsTemplate } from '../../../core/models/api.models';
-import { CompanyService } from '../../../core/services/company';
-import { ExcelVariableService } from '../../../core/services/excel-variable';
+import {
+  ChangeDetectionStrategy,
+  computed,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormArray, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import {
+  DataType,
+  ExcelVariable,
+  FileAnalysisResponse,
+  ImportProfile,
+  SmsTemplate,
+} from '../../../core/models/api.models';
+import { downloadWorkbook, normalizeHeader } from '../../../core/models/header-model';
 import { ImportProfileService } from '../../../core/services/import-profile';
+import { ExcelVariableService } from '../../../core/services/excel-variable';
+import { CampaignService } from '../../../core/services/campaign';
 import { SmsTemplateService } from '../../../core/services/sms-template';
+import { WorkspaceService } from '../../../core/services/workspace';
+
+function columnForm(column: Partial<ExcelVariable> = {}) {
+  return new FormGroup({
+    id: new FormControl<number | undefined>(column.id, { nonNullable: true }),
+    included: new FormControl(true, { nonNullable: true }),
+    headerName: new FormControl(column.headerName || column.code || '', {
+      nonNullable: true,
+      validators: Validators.required,
+    }),
+    code: new FormControl(column.code || '', {
+      nonNullable: true,
+      validators: Validators.required,
+    }),
+    label: new FormControl(column.label || column.headerName || column.code || '', {
+      nonNullable: true,
+    }),
+    dataType: new FormControl<DataType>(column.dataType || 'TEXT', { nonNullable: true }),
+    required: new FormControl(column.required || false, { nonNullable: true }),
+    phone: new FormControl(column.phone || false, { nonNullable: true }),
+  });
+}
 
 @Component({
   selector: 'app-import-profile-list',
-  imports: [CommonModule, FormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './import-profile-list.html',
   styleUrl: './import-profile-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ImportProfileList implements OnInit {
-  private readonly companyService = inject(CompanyService);
-  private readonly profileService = inject(ImportProfileService);
-  private readonly variableService = inject(ExcelVariableService);
-  private readonly templateService = inject(SmsTemplateService);
-
-  companies: Company[] = [];
-  profiles: ImportProfile[] = [];
-  variables: ExcelVariable[] = [];
-  templates: SmsTemplate[] = [];
-  selectedCompanyId = 0;
-  selectedProfileId = 0;
-  activePanel: 'profile' | 'variables' | 'message' | 'review' = 'profile';
-  error = '';
-  success = '';
-  dataTypes: DataType[] = ['TEXT', 'NUMBER', 'DATE', 'PHONE', 'EMAIL', 'BOOLEAN'];
-
-  profileForm: ImportProfile = { companyId: 0, name: '', description: '' };
-  variableForm: ExcelVariable = this.emptyVariableForm();
-  templateForm: SmsTemplate = {
-    profileId: 0,
-    name: '',
-    content: 'Bonjour {{PRENOM}}, votre message ici.',
+export class ImportProfileList {
+  readonly workspace = inject(WorkspaceService);
+  private readonly profilesApi = inject(ImportProfileService);
+  private readonly variablesApi = inject(ExcelVariableService);
+  private readonly campaignsApi = inject(CampaignService);
+  private readonly templatesApi = inject(SmsTemplateService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly profiles = signal<ImportProfile[]>([]);
+  readonly selectedId = signal<number | undefined>(undefined);
+  readonly templates = signal<SmsTemplate[]>([]);
+  readonly error = signal('');
+  readonly success = signal('');
+  readonly saving = signal(false);
+  readonly loading = signal(false);
+  readonly analyzing = signal(false);
+  readonly archivePending = signal(false);
+  readonly analysis = signal<FileAnalysisResponse | undefined>(undefined);
+  readonly selectedFile = signal<File | undefined>(undefined);
+  readonly dataTypes: DataType[] = ['TEXT', 'NUMBER', 'DATE', 'PHONE', 'EMAIL', 'BOOLEAN'];
+  readonly typeLabels: Record<DataType, string> = {
+    TEXT: 'Texte',
+    NUMBER: 'Nombre',
+    DATE: 'Date',
+    PHONE: 'Téléphone',
+    EMAIL: 'Email',
+    BOOLEAN: 'Oui / Non',
   };
+  readonly columns = new FormArray<ReturnType<typeof columnForm>>([]);
+  readonly form = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: Validators.required }),
+    description: new FormControl('', { nonNullable: true }),
+    columns: this.columns,
+  });
+  readonly importOptions = new FormGroup({
+    sheetNumber: new FormControl(1, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(1)],
+    }),
+    headerRow: new FormControl(1, {
+      nonNullable: true,
+      validators: [Validators.required, Validators.min(1)],
+    }),
+  });
+  readonly message = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: Validators.required }),
+    content: new FormControl('', { nonNullable: true, validators: Validators.required }),
+  });
 
-  variablePresets: Array<Pick<ExcelVariable, 'code' | 'label' | 'dataType' | 'required' | 'phone'>> = [
-    { code: 'TELEPHONE', label: 'Numero de telephone', dataType: 'PHONE', required: true, phone: true },
-    { code: 'PRENOM', label: 'Prenom', dataType: 'TEXT', required: false, phone: false },
-    { code: 'NOM', label: 'Nom', dataType: 'TEXT', required: false, phone: false },
-    { code: 'MONTANT', label: 'Montant', dataType: 'NUMBER', required: false, phone: false },
-    { code: 'DATE_ECHEANCE', label: 'Date echeance', dataType: 'DATE', required: false, phone: false },
-  ];
+  private readonly activeCompanyId = computed(() => this.workspace.activeCompany()?.id);
 
-  ngOnInit(): void {
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        if (companies[0]?.id) {
-          this.selectedCompanyId = companies[0].id;
-          this.profileForm.companyId = companies[0].id;
-          this.loadProfiles();
-        }
-      },
-      error: () => this.error = 'Impossible de charger les entreprises.',
+  constructor() {
+    effect(() => {
+      const companyId = this.activeCompanyId();
+      untracked(() => {
+        this.newModel();
+        this.profiles.set([]);
+        if (companyId) this.loadProfiles(companyId);
+      });
     });
   }
 
-  get selectedProfile(): ImportProfile | undefined {
-    return this.profiles.find((profile) => profile.id === this.selectedProfileId);
+  private loadProfiles(companyId: number): void {
+    this.profilesApi
+      .findByCompany(companyId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profiles) => {
+          if (this.workspace.activeCompany()?.id === companyId) this.profiles.set(profiles);
+        },
+        error: () => this.error.set('Impossible de charger les modèles.'),
+      });
   }
 
-  get phoneVariables(): ExcelVariable[] {
-    return this.variables.filter((variable) => variable.phone);
+  newModel(): void {
+    this.selectedId.set(undefined);
+    this.templates.set([]);
+    this.columns.clear();
+    this.form.reset({ name: '', description: '' });
+    this.message.reset();
+    this.selectedFile.set(undefined);
+    this.analysis.set(undefined);
+    this.archivePending.set(false);
+    this.error.set('');
+    this.success.set('');
+    this.loading.set(false);
   }
 
-  get requiredVariables(): ExcelVariable[] {
-    return this.variables.filter((variable) => variable.required);
+  selectModel(profile: ImportProfile): void {
+    this.newModel();
+    this.selectedId.set(profile.id);
+    this.loading.set(true);
+    this.form.patchValue({ name: profile.name, description: profile.description || '' });
+    if (!profile.id) return;
+    this.variablesApi
+      .findByProfile(profile.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (columns) => {
+          if (this.selectedId() !== profile.id) return;
+          this.columns.clear();
+          columns.forEach((column) => this.columns.push(columnForm(column)));
+          this.form.markAsPristine();
+          this.loading.set(false);
+        },
+        error: () => {
+          this.loading.set(false);
+          this.error.set('Impossible de charger les colonnes.');
+        },
+      });
+    this.loadTemplates(profile.id);
   }
 
-  get smsLength(): number {
-    return this.templateForm.content.length;
+  addColumn(code = ''): void {
+    this.columns.push(
+      columnForm({
+        code,
+        headerName: code,
+        label: code,
+        dataType: code === 'TELEPHONE' ? 'PHONE' : 'TEXT',
+      }),
+    );
+    this.form.markAsDirty();
   }
 
-  get smsSegments(): number {
-    if (!this.smsLength) {
-      return 0;
-    }
-    return this.smsLength <= 160 ? 1 : Math.ceil(this.smsLength / 153);
+  removeColumn(index: number): void {
+    this.columns.removeAt(index);
+    this.form.markAsDirty();
   }
 
-  get readinessScore(): number {
-    let score = 0;
-    if (this.selectedProfileId) score += 25;
-    if (this.variables.length > 0) score += 20;
-    if (this.phoneVariables.length > 0) score += 25;
-    if (this.templates.length > 0 || this.templateForm.content.trim()) score += 20;
-    if (this.templateVariables.every((code) => this.variables.some((variable) => variable.code === code))) score += 10;
-    return score;
+  moveColumn(index: number, direction: number): void {
+    const control = this.columns.at(index);
+    this.columns.removeAt(index);
+    this.columns.insert(index + direction, control);
+    this.form.markAsDirty();
   }
 
-  get templateVariables(): string[] {
-    const matches = this.templateForm.content.match(/\{\{\s*[\w-]+\s*\}\}/g) || [];
-    return [...new Set(matches.map((match) => match.replace(/[{}]/g, '').trim()))];
+  selectPhone(index: number): void {
+    this.columns.controls.forEach((column, i) => column.controls.phone.setValue(i === index));
+    this.columns.at(index).patchValue({ dataType: 'PHONE', required: true, included: true });
+    this.form.markAsDirty();
   }
 
-  get unknownTemplateVariables(): string[] {
-    return this.templateVariables.filter((code) => !this.variables.some((variable) => variable.code === code));
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile.set(input.files?.[0]);
+    this.analysis.set(undefined);
+    this.importOptions.reset({ sheetNumber: 1, headerRow: 1 });
+    input.value = '';
+    if (this.selectedFile()) this.analyzeHeaders();
   }
 
-  get previewMessage(): string {
-    return this.templateForm.content.replace(/\{\{\s*([\w-]+)\s*\}\}/g, (_match, code) => {
-      const variable = this.variables.find((item) => item.code === code);
-      return variable ? this.sampleValue(variable) : `[${code}]`;
-    });
+  analyzeHeaders(): void {
+    const file = this.selectedFile();
+    if (!file || this.importOptions.invalid) return;
+    this.analyzing.set(true);
+    this.error.set('');
+    const { sheetNumber, headerRow } = this.importOptions.getRawValue();
+    this.campaignsApi
+      .analyzeFile(file, sheetNumber - 1, headerRow)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.analyzing.set(false);
+          if (file === this.selectedFile()) this.analysis.set(result);
+        },
+        error: (err) => {
+          this.analyzing.set(false);
+          this.analysis.set(undefined);
+          this.error.set(err.error?.message || 'Impossible de lire les en-têtes.');
+        },
+      });
   }
 
-  loadProfiles(): void {
-    this.error = '';
-    this.success = '';
-    this.profileForm.companyId = this.selectedCompanyId;
-    this.profileService.findByCompany(this.selectedCompanyId).subscribe({
-      next: (profiles) => {
-        this.profiles = profiles;
-        this.selectedProfileId = profiles[0]?.id || 0;
-        this.selectedProfileId ? this.loadProfileWorkspace() : this.resetWorkspace();
-      },
-      error: () => this.error = 'Impossible de charger les profils.',
-    });
-  }
-
-  loadProfileWorkspace(): void {
-    this.error = '';
-    this.success = '';
-    this.variableForm = this.emptyVariableForm();
-    this.templateForm.profileId = this.selectedProfileId;
-    this.loadVariables();
-    this.loadTemplates();
-  }
-
-  loadVariables(): void {
-    if (!this.selectedProfileId) {
-      this.variables = [];
+  addImportedHeaders(): void {
+    const result = this.analysis();
+    if (!result) return;
+    if (
+      result.sheetIndex !== this.importOptions.controls.sheetNumber.value - 1 ||
+      result.headerRow !== this.importOptions.controls.headerRow.value
+    ) {
+      this.error.set('Relisez les en-têtes pour appliquer la feuille et la ligne choisies.');
       return;
     }
-    this.variableService.findByProfile(this.selectedProfileId).subscribe({
-      next: (variables) => this.variables = variables,
-      error: () => this.error = 'Impossible de charger les variables du profil.',
-    });
+    const used = new Set(
+      this.columns.getRawValue().map((column) => normalizeHeader(column.headerName)),
+    );
+    for (const code of result.headers) {
+      if (used.has(code)) continue;
+      const headerName = result.headerLabels?.[code] || code;
+      const dataType: DataType = /TELEPHONE|PHONE|MOBILE|PORTABLE|^TEL$/.test(code)
+        ? 'PHONE'
+        : /EMAIL|MAIL/.test(code)
+          ? 'EMAIL'
+          : 'TEXT';
+      this.columns.push(
+        columnForm({
+          code: /^[A-Z]/.test(code) ? code : `COL_${code}`,
+          headerName,
+          label: headerName,
+          dataType,
+        }),
+      );
+      used.add(code);
+    }
+    this.form.markAsDirty();
+    this.success.set(
+      'En-têtes ajoutés. Vérifiez les types et désignez le destinataire SMS avant d’enregistrer.',
+    );
+    this.analysis.set(undefined);
   }
 
-  loadTemplates(): void {
-    if (!this.selectedProfileId) {
-      this.templates = [];
+  saveModel(): void {
+    const companyId = this.workspace.activeCompany()?.id;
+    if (!companyId || this.saving() || this.loading() || this.analyzing()) return;
+    const raw = this.form.getRawValue();
+    const columns: ExcelVariable[] = raw.columns
+      .filter((c) => c.included)
+      .map((c) => ({
+        id: c.id,
+        code: normalizeHeader(c.code),
+        headerName: c.headerName.trim(),
+        label: c.label.trim() || c.headerName.trim(),
+        dataType: c.phone ? 'PHONE' : c.dataType,
+        required: c.required || c.phone,
+        phone: c.phone,
+      }));
+    if (
+      !raw.name.trim() ||
+      !columns.length ||
+      columns.some((c) => !c.headerName || !/^[A-Z][A-Z0-9_]*$/.test(c.code))
+    ) {
+      this.error.set(
+        'Saisissez un nom de modèle et au moins une colonne avec un en-tête et un code valide.',
+      );
       return;
     }
-    this.templateService.findByProfile(this.selectedProfileId).subscribe({
-      next: (templates) => {
-        this.templates = templates;
-        if (!this.templateForm.name && templates[0]) {
-          this.templateForm = {
-            profileId: this.selectedProfileId,
-            name: templates[0].name,
-            content: templates[0].content,
-          };
-        }
-      },
-      error: () => this.error = 'Impossible de charger les contenus SMS.',
-    });
+    this.saving.set(true);
+    this.error.set('');
+    this.success.set('');
+    this.profilesApi
+      .saveModel(
+        { companyId, name: raw.name.trim(), description: raw.description, columns },
+        this.selectedId(),
+      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => {
+          this.saving.set(false);
+          if (companyId !== this.workspace.activeCompany()?.id) return;
+          this.loadProfiles(companyId);
+          this.selectModel(profile);
+          this.success.set('Modèle d’en-têtes enregistré.');
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.error.set(err.error?.message || 'Impossible d’enregistrer le modèle.');
+        },
+      });
   }
 
-  createProfile(): void {
-    this.error = '';
-    this.success = '';
-    this.profileForm.companyId = this.selectedCompanyId;
-    this.profileService.create(this.profileForm).subscribe({
-      next: (profile) => {
-        this.profileForm = { companyId: this.selectedCompanyId, name: '', description: '' };
-        this.success = 'Profil de campagne cree. Vous pouvez maintenant declarer les entetes et le SMS.';
-        this.profileService.findByCompany(this.selectedCompanyId).subscribe({
-          next: (profiles) => {
-            this.profiles = profiles;
-            this.selectedProfileId = profile.id || profiles[0]?.id || 0;
-            this.activePanel = 'variables';
-            this.loadProfileWorkspace();
-          },
-        });
-      },
-      error: () => this.error = 'Impossible de creer le profil.',
-    });
+  duplicate(): void {
+    const id = this.selectedId();
+    if (!id) return;
+    this.saving.set(true);
+    this.profilesApi
+      .duplicate(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (profile) => {
+          this.saving.set(false);
+          this.loadProfiles(this.workspace.activeCompany()?.id || 0);
+          this.selectModel(profile);
+          this.success.set('Structure du modèle dupliquée.');
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.error.set(err.error?.message || 'Impossible de dupliquer le modèle.');
+        },
+      });
   }
 
-  createVariable(): void {
-    if (!this.selectedProfileId) {
-      this.error = 'Selectionnez ou creez un profil avant de declarer les entetes.';
+  archive(): void {
+    const id = this.selectedId();
+    const companyId = this.workspace.activeCompany()?.id;
+    if (!id || !companyId) return;
+    this.saving.set(true);
+    this.profilesApi
+      .archive(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.newModel();
+          this.loadProfiles(companyId);
+          this.success.set('Modèle archivé. Les campagnes existantes sont conservées.');
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.error.set(err.error?.message || 'Impossible d’archiver le modèle.');
+        },
+      });
+  }
+
+  download(): void {
+    const id = this.selectedId();
+    if (!id) return;
+    this.profilesApi
+      .download(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (blob) => downloadWorkbook(blob, 'modele-entetes.xlsx'),
+        error: () => this.error.set('Impossible de télécharger le modèle enregistré.'),
+      });
+  }
+
+  private loadTemplates(id: number): void {
+    this.templatesApi
+      .findByProfile(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (templates) => {
+          if (this.selectedId() === id) this.templates.set(templates);
+        },
+        error: () => this.error.set('Impossible de charger les messages du modèle.'),
+      });
+  }
+
+  insertVariable(code: string): void {
+    this.message.controls.content.setValue(
+      `${this.message.controls.content.value} {{${normalizeHeader(code)}}}`.trim(),
+    );
+  }
+
+  saveMessage(): void {
+    const id = this.selectedId();
+    if (!id || this.message.invalid || this.form.dirty) {
+      this.error.set('Enregistrez la structure puis renseignez le nom et le contenu du message.');
       return;
     }
-    this.error = '';
-    this.success = '';
-    this.variableForm.profileId = this.selectedProfileId;
-    this.variableForm.code = this.normalizeCode(this.variableForm.code);
-    if (this.variableForm.phone) {
-      this.variableForm.required = true;
-      this.variableForm.dataType = 'PHONE';
-    }
-    this.variableService.create(this.variableForm).subscribe({
-      next: () => {
-        this.success = 'Variable ajoutee au profil de campagne.';
-        this.variableForm = this.emptyVariableForm();
-        this.loadVariables();
-      },
-      error: (err) => this.error = err.error?.message || 'Impossible de creer la variable.',
-    });
-  }
-
-  deleteVariable(variable: ExcelVariable): void {
-    if (!variable.id) {
+    const message = this.message.getRawValue();
+    const codes = this.columns.getRawValue().map((c) => c.code);
+    const unknown = [...message.content.matchAll(/\{\{\s*([\w-]+)\s*\}\}/g)]
+      .map((m) => m[1])
+      .filter((code) => !codes.includes(code));
+    if (unknown.length) {
+      this.error.set(`Variables inconnues : ${unknown.join(', ')}`);
       return;
     }
-
-    const confirmed = window.confirm(`Supprimer la variable ${variable.code} de ce profil ?`);
-    if (!confirmed) {
-      return;
-    }
-
-    this.error = '';
-    this.success = '';
-    this.variableService.delete(variable.id).subscribe({
-      next: () => {
-        this.success = 'Variable supprimee du profil.';
-        this.loadVariables();
-      },
-      error: () => this.error = 'Impossible de supprimer la variable.',
-    });
-  }
-
-  usePreset(preset: Pick<ExcelVariable, 'code' | 'label' | 'dataType' | 'required' | 'phone'>): void {
-    this.variableForm = {
-      profileId: this.selectedProfileId,
-      code: preset.code,
-      label: preset.label,
-      dataType: preset.dataType,
-      required: preset.required,
-      phone: preset.phone,
-    };
-  }
-
-  createTemplate(): void {
-    if (!this.selectedProfileId) {
-      this.error = 'Selectionnez ou creez un profil avant de composer le SMS.';
-      return;
-    }
-    this.error = '';
-    this.success = '';
-    this.templateForm.profileId = this.selectedProfileId;
-    this.templateService.create(this.templateForm).subscribe({
-      next: () => {
-        this.success = 'Contenu SMS enregistre pour ce profil.';
-        this.templateForm = { profileId: this.selectedProfileId, name: '', content: '' };
-        this.loadTemplates();
-        this.activePanel = 'review';
-      },
-      error: () => this.error = 'Impossible de creer le contenu SMS.',
-    });
-  }
-
-  insertVariable(variable: ExcelVariable): void {
-    const token = `{{${variable.code}}}`;
-    const separator = this.templateForm.content.trim().length ? ' ' : '';
-    this.templateForm.content = `${this.templateForm.content}${separator}${token}`;
-  }
-
-  onPhoneVariableChange(): void {
-    if (this.variableForm.phone) {
-      this.variableForm.required = true;
-      this.variableForm.dataType = 'PHONE';
-    }
-  }
-
-  editTemplate(template: SmsTemplate): void {
-    this.templateForm = {
-      profileId: this.selectedProfileId,
-      name: template.name,
-      content: template.content,
-    };
-    this.activePanel = 'message';
-  }
-
-  private resetWorkspace(): void {
-    this.variables = [];
-    this.templates = [];
-    this.variableForm = this.emptyVariableForm();
-    this.templateForm = { profileId: 0, name: '', content: 'Bonjour {{PRENOM}}, votre message ici.' };
-  }
-
-  private emptyVariableForm(): ExcelVariable {
-    return {
-      profileId: this.selectedProfileId,
-      code: '',
-      label: '',
-      dataType: 'TEXT',
-      required: false,
-      phone: false,
-    };
-  }
-
-  private normalizeCode(value: string): string {
-    return value.trim().toUpperCase().replace(/\s+/g, '_').replace(/-/g, '_');
-  }
-
-  private sampleValue(variable: ExcelVariable): string {
-    const samples: Record<DataType, string> = {
-      TEXT: variable.code.includes('NOM') ? 'Kouame' : 'Awa',
-      NUMBER: '25000',
-      DATE: '15/05/2026',
-      PHONE: '+2250700000000',
-      EMAIL: 'client@exemple.ci',
-      BOOLEAN: 'Oui',
-    };
-    return samples[variable.dataType];
+    this.saving.set(true);
+    this.templatesApi
+      .create({ profileId: id, ...message })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.message.reset();
+          this.loadTemplates(id);
+          this.success.set('Message enregistré pour ce modèle.');
+        },
+        error: (err) => {
+          this.saving.set(false);
+          this.error.set(err.error?.message || 'Impossible d’enregistrer le message.');
+        },
+      });
   }
 }

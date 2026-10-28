@@ -1,5 +1,7 @@
 package com.calipso.campaign;
 
+import com.calipso.auth.CompanyAccess;
+
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
 import com.calipso.excel.ExcelImportService;
@@ -34,6 +36,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CampaignController {
 
+    private final CompanyAccess access;
+
     private final CampaignRepository campaignRepository;
     private final CompanyRepository companyRepository;
     private final ExcelImportProfileRepository profileRepository;
@@ -44,6 +48,7 @@ public class CampaignController {
     private final SubscriptionService subscriptionService;
     private final MultichannelGatewayService gatewayService;
     private final ExcelImportService excelImportService;
+    private final CampaignHeaderService campaignHeaders;
 
     @PostMapping
     public Campaign create(@RequestBody @Valid CreateCampaignRequest request) {
@@ -66,10 +71,14 @@ public class CampaignController {
         } else if (profile != null) {
             company = profile.getCompany();
         } else {
-            company = companyRepository.findAll().stream().findFirst()
+            company = companyRepository.findById(access.currentUser().getCompany().getId())
                     .orElseThrow(() -> new RuntimeException("Aucune entreprise disponible"));
         }
 
+        access.requireCompany(company);
+        if (profile != null) access.requireSameCompany(company, profile.getCompany());
+        if (template != null) access.requireSameCompany(company, template.getCompany());
+        if (phoneVariable != null) access.requireSameCompany(company, phoneVariable.getCompany());
         CampaignChannel channel = request.channel() == null ? CampaignChannel.SMS : request.channel();
         String messageTemplate = request.messageTemplate();
         if ((messageTemplate == null || messageTemplate.isBlank()) && template != null) {
@@ -97,33 +106,39 @@ public class CampaignController {
     }
 
     @PostMapping("/analyze-file")
-    public FileAnalysisResponse analyzeFile(@RequestParam("file") MultipartFile file) {
-        return excelImportService.analyzeFile(file);
+    public FileAnalysisResponse analyzeFile(@RequestParam("file") MultipartFile file,
+                                            @RequestParam(defaultValue = "0") int sheetIndex,
+                                            @RequestParam(defaultValue = "1") int headerRow) {
+        return excelImportService.analyzeFile(file, sheetIndex, headerRow);
     }
 
     @PostMapping("/wizard")
     public Campaign createFromWizard(@RequestBody @Valid WizardCampaignRequest request) {
+        access.requireCompany(request.companyId());
         Company company = companyRepository.findById(request.companyId())
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
 
         CampaignChannel channel = request.channel() == null ? CampaignChannel.SMS : request.channel();
 
+        var prepared = campaignHeaders.prepare(request);
         Campaign campaign = campaignRepository.save(Campaign.builder()
                 .company(company)
+                .profile(prepared.profile())
+                .importConfiguration(prepared.snapshot())
                 .name(request.name().trim())
                 .description(request.description())
                 .channel(channel)
                 .messageTemplate(request.messageTemplate())
                 .emailSubject(request.emailSubject())
-                .recipientColumn(request.recipientColumn())
+                .recipientColumn(prepared.recipientColumn())
                 .mediaUrl(request.mediaUrl())
                 .ctaLabel(request.ctaLabel())
                 .ctaUrl(request.ctaUrl())
                 .status(CampaignStatus.DRAFT)
                 .build());
 
-        if (request.rows() != null && !request.rows().isEmpty()) {
-            campaign = excelImportService.importRowsIntoCampaign(campaign, request.rows(), request.recipientColumn());
+        if (!prepared.rows().isEmpty()) {
+            campaign = excelImportService.importRowsIntoCampaign(campaign, prepared.rows(), prepared.recipientColumn());
         }
 
         if (request.sendImmediately() && campaign.getTotalValid() != null && campaign.getTotalValid() > 0) {
@@ -144,7 +159,10 @@ public class CampaignController {
 
     @GetMapping("/company/{companyId}")
     public List<Campaign> findByCompany(@PathVariable Long companyId) {
-        return campaignRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        access.requireCompany(companyId);
+        var campaigns = campaignRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        campaigns.forEach(access::requireCampaign);
+        return campaigns;
     }
 
     @PostMapping("/{campaignId}/send")
@@ -152,6 +170,7 @@ public class CampaignController {
         Campaign campaign = campaignRepository.findById(campaignId)
                 .orElseThrow(() -> new RuntimeException("Campagne introuvable"));
 
+        access.requireCampaign(campaign);
         List<CampaignRecipient> recipients = recipientRepository.findByCampaignId(campaignId);
         List<CampaignRecipient> validRecipients = recipients.stream()
                 .filter(recipient -> recipient.getStatus() == RecipientStatus.VALID)

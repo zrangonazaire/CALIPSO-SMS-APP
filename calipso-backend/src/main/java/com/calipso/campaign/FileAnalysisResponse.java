@@ -11,6 +11,10 @@ public record FileAnalysisResponse(
         String detectedNameColumn,
         int totalRows,
         List<Map<String, Object>> sampleRows,
-        List<Map<String, Object>> allRows
+        List<Map<String, Object>> allRows,
+        Map<String, String> headerLabels,
+        List<String> sheetNames,
+        int sheetIndex,
+        int headerRow
 ) {
 }
