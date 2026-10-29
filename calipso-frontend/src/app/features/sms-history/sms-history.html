@@ -7,12 +7,13 @@
     </div>
   </header>
 
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <app-period-filter idPrefix="history-period" basis="Envois et tentatives effectués pendant la période. Les autres filtres restent cumulables." (periodChange)="period.set($event)" />
+  <div class="alert alert-danger" *ngIf="error()">{{ error() }}</div>
 
   <section class="history-toolbar calipso-card p-3">
     <div>
       <label class="form-label">Canal</label>
-      <select class="form-select" [(ngModel)]="channelFilter">
+      <select class="form-select" [ngModel]="channelFilter()" (ngModelChange)="channelFilter.set($event)">
         <option value="ALL">Tous les canaux</option>
         <option value="SMS">SMS Pro</option>
         <option value="WHATSAPP">WhatsApp</option>
@@ -22,7 +23,7 @@
 
     <div>
       <label class="form-label">Origine</label>
-      <select class="form-select" [(ngModel)]="sourceFilter">
+      <select class="form-select" [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">
         <option value="ALL">Toutes les origines</option>
         <option value="CAMPAIGN">Campagnes</option>
         <option value="MANUAL">Envoi Express</option>
@@ -31,7 +32,7 @@
 
     <div>
       <label class="form-label">Statut</label>
-      <select class="form-select" [(ngModel)]="statusFilter">
+      <select class="form-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
         <option value="ALL">Tous les statuts</option>
         <option *ngFor="let status of statuses" [value]="status">{{ statusLabel(status) }}</option>
       </select>
@@ -39,14 +40,14 @@
 
     <div>
       <label class="form-label">Recherche</label>
-      <input class="form-control" [(ngModel)]="search" placeholder="Numéro, email, campagne, texte...">
+      <input class="form-control" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Numéro, email, campagne, texte...">
     </div>
   </section>
 
   <section class="metric-grid">
     <article class="metric-card">
       <span>Messages affichés</span>
-      <strong>{{ filteredHistory.length }}</strong>
+      <strong>{{ filteredHistory().length }}</strong>
     </article>
     <article class="metric-card">
       <span>Via Campagnes</span>
@@ -65,10 +66,10 @@
   <section class="history-list calipso-card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h5 class="fw-bold mb-0">Détail des messages</h5>
-      <span class="text-muted small" *ngIf="loading">Actualisation...</span>
+      <span class="text-muted small" *ngIf="loading()">Actualisation...</span>
     </div>
 
-    <div class="history-row" *ngFor="let item of filteredHistory">
+    <div class="history-row" *ngFor="let item of filteredHistory()">
       <div class="history-main">
         <div class="history-topline">
           <span class="channel-pill" [ngClass]="(item.channel || 'SMS').toLowerCase()">
@@ -93,7 +94,7 @@
       </div>
     </div>
 
-    <div class="empty-state text-center text-muted py-5" *ngIf="!loading && filteredHistory.length === 0">
+    <div class="empty-state text-center text-muted py-5" *ngIf="!loading() && filteredHistory().length === 0">
       Aucun message enregistré pour ces critères.
     </div>
   </section>

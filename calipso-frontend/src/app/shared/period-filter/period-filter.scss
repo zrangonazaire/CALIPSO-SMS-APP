@@ -1,0 +1,14 @@
+:host { display: block; margin: 1.25rem 0; }
+.period-panel { padding: 1.1rem 1.25rem; background: #fff; border: 1px solid #dce3ed; border-radius: 14px; color: #1c2941; }
+.period-heading { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: .9rem; }
+h3 { font-size: 1rem; font-weight: 700; margin: 0 0 .3rem; }
+p { margin: 0; color: #526078; font-size: .82rem; }
+.period-summary { padding: .3rem .65rem; border-radius: 8px; background: #edf2ff; color: #244ba2; font-size: .8rem; font-weight: 600; }
+.period-fields { display: grid; grid-template-columns: minmax(190px, 1.1fr) repeat(2, minmax(140px, 1fr)) auto; gap: .85rem; align-items: end; }
+label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: .35rem; }
+.period-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+.error { color: #a11b2c; margin-top: .7rem; }
+.pending { color: #745000; margin-top: .7rem; }
+button:focus-visible { outline: 3px solid #315ac4; outline-offset: 3px; }
+@media (max-width: 1200px) { .period-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); } .period-actions { grid-column: 1 / -1; } }
+@media (max-width: 650px) { .period-fields { grid-template-columns: 1fr; } .period-panel { padding: 1rem; } }

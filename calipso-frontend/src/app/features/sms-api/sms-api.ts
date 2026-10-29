@@ -1,53 +1,46 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { PeriodFilter } from '../../shared/period-filter/period-filter';
+import { DatePeriod } from '../../core/models/date-period';
 import { OrangeSmsContract, SmsApiDashboard, SmsSendHistory } from '../../core/models/api.models';
 import { SmsApiService } from '../../core/services/sms-api';
 import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-sms-api',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, PeriodFilter],
   templateUrl: './sms-api.html',
   styleUrl: './sms-api.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SmsApi {
   readonly workspace = inject(WorkspaceService);
   private readonly smsApiService = inject(SmsApiService);
 
-  dashboard?: SmsApiDashboard;
-  loading = false;
-  error = '';
+  private readonly dashboardData = signal<SmsApiDashboard | undefined>(undefined);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly period = signal<DatePeriod>({});
+  private readonly refresh = signal(0);
 
   constructor() {
-    effect(() => {
+    effect(onCleanup => {
       const companyId = this.workspace.selectedCompanyId();
-      if (companyId) {
-        this.loadDashboard(companyId);
-      }
+      const period = this.period(); this.refresh();
+      this.dashboardData.set(undefined); this.error.set(''); this.loading.set(false);
+      if (!companyId) return;
+      this.loading.set(true);
+      const subscription = this.smsApiService.findDashboard(companyId, period).subscribe({
+        next: dashboard => { this.dashboardData.set(dashboard); this.loading.set(false); },
+        error: err => { this.loading.set(false); this.error.set(this.errorMessage(err)); },
+      });
+      onCleanup(() => subscription.unsubscribe());
     });
   }
 
-  get selectedCompanyId(): number {
-    return this.workspace.selectedCompanyId();
-  }
-
-  loadDashboard(companyId = this.selectedCompanyId): void {
-    if (!companyId) return;
-
-    this.loading = true;
-    this.error = '';
-    this.smsApiService.findDashboard(companyId).subscribe({
-      next: (dashboard) => {
-        this.dashboard = dashboard;
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = this.errorMessage(err);
-      },
-    });
-  }
+  get dashboard(): SmsApiDashboard | undefined { return this.dashboardData(); }
+  get selectedCompanyId(): number { return this.workspace.selectedCompanyId(); }
+  loadDashboard(): void { this.refresh.update(value => value + 1); }
 
   get activeContracts(): OrangeSmsContract[] {
     return this.dashboard?.contracts.filter((contract) => contract.status === 'ACTIVE') || [];

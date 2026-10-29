@@ -9,15 +9,17 @@
     </div>
 
     <div class="api-actions">
-      <button class="btn-atlas" type="button" (click)="loadDashboard()" [disabled]="loading || !selectedCompanyId">
+      <button class="btn-atlas" type="button" (click)="loadDashboard()" [disabled]="loading() || !selectedCompanyId">
         <i class="bi bi-arrow-clockwise"></i>
-        <span>{{ loading ? 'Synchronisation...' : 'Actualiser l\'état' }}</span>
+        <span>{{ loading() ? 'Synchronisation...' : 'Actualiser l\'état' }}</span>
       </button>
     </div>
   </header>
 
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-danger" *ngIf="error()">{{ error() }}</div>
 
+  <app-period-filter idPrefix="api-period" basis="Envois et tentatives effectués pendant la période. Le solde affiché reste actuel." (periodChange)="period.set($event)" />
+  @if (loading()) { <p class="text-muted" role="status">Actualisation des statistiques…</p> }
   <!-- 3 Channel Connectors Status -->
   <section class="row g-3 mb-2">
     <div class="col-md-4">
@@ -114,7 +116,7 @@
             <td class="message-cell">{{ item.message }}</td>
             <td>{{ sourceLabel(item.source) }}</td>
             <td><span class="badge" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span></td>
-            <td>{{ (item.createdAt || item.sentAt) | date:'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ (item.sentAt || item.createdAt) | date:'dd/MM/yyyy HH:mm' }}</td>
           </tr>
           <tr *ngIf="latestMessages.length === 0">
             <td colspan="6" class="text-center text-muted py-4">Aucune transmission récente.</td>

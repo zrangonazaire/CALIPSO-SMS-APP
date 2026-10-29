@@ -1,3 +1,4 @@
+import { DatePeriod, periodParams } from '../models/date-period';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -12,8 +13,8 @@ export class CampaignService {
 
   constructor(private http: HttpClient) {}
 
-  findByCompany(companyId: number): Observable<Campaign[]> {
-    return this.http.get<Campaign[]>(`${this.apiUrl}/company/${companyId}`);
+  findByCompany(companyId: number, period: DatePeriod = {}): Observable<Campaign[]> {
+    return this.http.get<Campaign[]>(`${this.apiUrl}/company/${companyId}`, { params: periodParams(period) });
   }
 
   create(campaign: Campaign): Observable<Campaign> {

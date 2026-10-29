@@ -1,61 +1,55 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { PeriodFilter } from '../../shared/period-filter/period-filter';
+import { DatePeriod } from '../../core/models/date-period';
 import { CampaignChannel, SmsSendHistory } from '../../core/models/api.models';
 import { SmsHistoryService } from '../../core/services/sms-history';
 import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-sms-history',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PeriodFilter],
   templateUrl: './sms-history.html',
   styleUrl: './sms-history.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SmsHistory {
   readonly workspace = inject(WorkspaceService);
   private readonly historyService = inject(SmsHistoryService);
 
-  history: SmsSendHistory[] = [];
-  channelFilter: 'ALL' | CampaignChannel = 'ALL';
-  sourceFilter: 'ALL' | 'CAMPAIGN' | 'MANUAL' = 'ALL';
-  statusFilter = 'ALL';
-  search = '';
-  error = '';
-  loading = false;
+  readonly history = signal<SmsSendHistory[]>([]);
+  readonly channelFilter = signal<'ALL' | CampaignChannel>('ALL');
+  readonly sourceFilter = signal<'ALL' | 'CAMPAIGN' | 'MANUAL'>('ALL');
+  readonly statusFilter = signal('ALL');
+  readonly search = signal('');
+  readonly error = signal('');
+  readonly loading = signal(false);
+  readonly period = signal<DatePeriod>({});
 
   constructor() {
-    effect(() => {
+    effect(onCleanup => {
       const companyId = this.workspace.selectedCompanyId();
-      if (companyId) {
-        this.loadHistory(companyId);
-      }
+      const period = this.period();
+      this.history.set([]); this.error.set(''); this.loading.set(false);
+      if (!companyId) return;
+      this.loading.set(true);
+      const subscription = this.historyService.findByCompany(companyId, period).subscribe({
+        next: history => { this.history.set(history); this.loading.set(false); },
+        error: () => { this.loading.set(false); this.error.set('Impossible de charger le journal des envois.'); },
+      });
+      onCleanup(() => subscription.unsubscribe());
     });
   }
 
-  loadHistory(companyId = this.workspace.selectedCompanyId()): void {
-    if (!companyId) return;
-    this.error = '';
-    this.loading = true;
-    this.historyService.findByCompany(companyId).subscribe({
-      next: (history) => {
-        this.history = history;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-        this.error = 'Impossible de charger le journal des envois.';
-      },
-    });
-  }
+  readonly filteredHistory = computed(() => {
+    const term = this.search().trim().toLowerCase();
 
-  get filteredHistory(): SmsSendHistory[] {
-    const term = this.search.trim().toLowerCase();
-
-    return this.history.filter((item) => {
+    return this.history().filter((item) => {
       const ch = item.channel || 'SMS';
-      const matchesChannel = this.channelFilter === 'ALL' || ch === this.channelFilter;
-      const matchesSource = this.sourceFilter === 'ALL' || item.source === this.sourceFilter;
-      const matchesStatus = this.statusFilter === 'ALL' || item.status === this.statusFilter;
+      const matchesChannel = this.channelFilter() === 'ALL' || ch === this.channelFilter();
+      const matchesSource = this.sourceFilter() === 'ALL' || item.source === this.sourceFilter();
+      const matchesStatus = this.statusFilter() === 'ALL' || item.status === this.statusFilter();
       const matchesSearch =
         !term ||
         item.phoneNumber.toLowerCase().includes(term) ||
@@ -64,22 +58,22 @@ export class SmsHistory {
 
       return matchesChannel && matchesSource && matchesStatus && matchesSearch;
     });
-  }
+  });
 
   get statuses(): string[] {
-    return [...new Set(this.history.map((item) => item.status))];
+    return [...new Set(this.history().map((item) => item.status))];
   }
 
   get totalSegments(): number {
-    return this.filteredHistory.reduce((total, item) => total + (item.segmentCount || 0), 0);
+    return this.filteredHistory().reduce((total, item) => total + (item.segmentCount || 0), 0);
   }
 
   get campaignCount(): number {
-    return this.filteredHistory.filter((item) => item.source === 'CAMPAIGN').length;
+    return this.filteredHistory().filter((item) => item.source === 'CAMPAIGN').length;
   }
 
   get manualCount(): number {
-    return this.filteredHistory.filter((item) => item.source === 'MANUAL').length;
+    return this.filteredHistory().filter((item) => item.source === 'MANUAL').length;
   }
 
   sourceLabel(source: string): string {

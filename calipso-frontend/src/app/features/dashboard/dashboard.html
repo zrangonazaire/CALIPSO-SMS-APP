@@ -1,4 +1,6 @@
 <div class="dashboard-page">
+  <app-period-filter idPrefix="dashboard-period" basis="Campagnes créées pendant la période. Le solde affiché reste le solde actuel." (periodChange)="period.set($event)" />
+  @if (loading()) { <p class="text-muted" role="status">Actualisation des statistiques…</p> }
   <!-- Welcome Hero -->
   <section class="hero-banner">
     <div class="hero-content">
@@ -49,7 +51,7 @@
     </div>
   </section>
 
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <div class="alert alert-danger" *ngIf="error()">{{ error() }}</div>
 
   <!-- KPI Row -->
   <section class="kpi-grid">
@@ -65,9 +67,9 @@
     <article class="kpi-card">
       <div class="kpi-icon emerald"><i class="bi bi-send-check-fill"></i></div>
       <div class="kpi-body">
-        <span>Messages délivrés</span>
-        <strong>{{ totalSentMessages | number:'1.0-0' }}</strong>
-        <small>Tous canaux confondus</small>
+        <span>Messages transmis</span>
+        <strong>{{ totalSentMessages() | number:'1.0-0' }}</strong>
+        <small>Campagnes de la période, tous canaux</small>
       </div>
     </article>
 
@@ -75,8 +77,8 @@
       <div class="kpi-icon blue"><i class="bi bi-megaphone-fill"></i></div>
       <div class="kpi-body">
         <span>Campagnes envoyées</span>
-        <strong>{{ completedCampaigns }}</strong>
-        <small>{{ campaigns.length }} créée(s) au total</small>
+        <strong>{{ completedCampaigns() }}</strong>
+        <small>{{ campaigns().length }} créée(s) sur la période</small>
       </div>
     </article>
 
@@ -84,7 +86,7 @@
       <div class="kpi-icon amber"><i class="bi bi-hourglass-split"></i></div>
       <div class="kpi-body">
         <span>Prêtes à diffuser</span>
-        <strong>{{ readyCampaigns }}</strong>
+        <strong>{{ readyCampaigns() }}</strong>
         <a routerLink="/campaigns">Voir mes brouillons →</a>
       </div>
     </article>
@@ -113,7 +115,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let campaign of campaigns.slice(0, 6)">
+            <tr *ngFor="let campaign of campaigns().slice(0, 6)">
               <td>
                 <div class="fw-semibold text-dark">{{ campaign.name }}</div>
                 <small class="text-muted">{{ campaign.description || 'Diffusion ciblée' }}</small>
@@ -140,11 +142,11 @@
               <td class="text-muted small">{{ campaign.createdAt | date:'dd/MM/yyyy HH:mm' }}</td>
             </tr>
 
-            <tr *ngIf="campaigns.length === 0">
+            <tr *ngIf="!loading() && campaigns().length === 0">
               <td colspan="5" class="text-center py-5">
                 <div class="empty-box">
                   <i class="bi bi-send-plus text-primary fs-2"></i>
-                  <h6 class="fw-bold mt-2 mb-1">Aucune campagne pour le moment</h6>
+                  <h6 class="fw-bold mt-2 mb-1">Aucune campagne pour cette période</h6>
                   <p class="text-muted small mb-3">Lancez votre première campagne SMS, WhatsApp ou Email en quelques clics.</p>
                   <a routerLink="/campaigns/create" class="btn-atlas btn-sm">Créer ma première campagne</a>
                 </div>

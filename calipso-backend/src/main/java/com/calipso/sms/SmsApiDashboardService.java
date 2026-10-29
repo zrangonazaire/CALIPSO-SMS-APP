@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import com.calipso.statistics.StatisticsPeriod;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,7 +29,13 @@ public class SmsApiDashboardService {
 
     @Transactional
     public SmsApiDashboardResponse getDashboard(Long companyId) {
+        return getDashboard(companyId, null, null);
+    }
+
+    @Transactional
+    public SmsApiDashboardResponse getDashboard(Long companyId, LocalDate startDate, LocalDate endDate) {
         access.requireCompany(companyId);
+        var period = StatisticsPeriod.of(startDate, endDate);
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
 
@@ -57,7 +65,8 @@ public class SmsApiDashboardService {
             log.warn("[SMS API] Contrats Orange non joignables actuellement: {}", e.getMessage());
         }
 
-        List<SmsSendHistory> history = historyRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        List<SmsSendHistory> history = startDate == null && endDate == null ? historyRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
+                : historyRepository.findForPeriod(companyId, period);
         int totalMessages = history.size();
         int acceptedMessages = countByStatus(history, RecipientStatus.SENT) + countByStatus(history, RecipientStatus.DELIVERED);
         int deliveredMessages = countByStatus(history, RecipientStatus.DELIVERED);
@@ -66,7 +75,7 @@ public class SmsApiDashboardService {
         int consumedSegments = sumSegmentsByAcceptedStatus(history);
         int failedSegments = sumSegmentsByStatus(history, RecipientStatus.FAILED) + sumSegmentsByStatus(history, RecipientStatus.INVALID);
         double successRate = totalMessages == 0 ? 0 : (acceptedMessages * 100.0) / totalMessages;
-        LocalDateTime lastActivityAt = history.isEmpty() ? null : history.getFirst().getCreatedAt();
+        LocalDateTime lastActivityAt = history.isEmpty() ? null : (history.getFirst().getSentAt() == null ? history.getFirst().getCreatedAt() : history.getFirst().getSentAt());
 
         return new SmsApiDashboardResponse(
                 company.getId(),

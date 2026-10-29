@@ -1,6 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { PeriodFilter } from '../../shared/period-filter/period-filter';
+import { DatePeriod } from '../../core/models/date-period';
 import { AuthService } from '../../core/auth/auth';
 import { Campaign, CampaignChannel } from '../../core/models/api.models';
 import { CampaignService } from '../../core/services/campaign';
@@ -8,24 +10,36 @@ import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, PeriodFilter],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard {
   readonly auth = inject(AuthService);
   readonly workspace = inject(WorkspaceService);
   private readonly campaignService = inject(CampaignService);
 
-  campaigns: Campaign[] = [];
-  error = '';
+  readonly campaigns = signal<Campaign[]>([]);
+  readonly error = signal('');
+  readonly loading = signal(false);
+  readonly period = signal<DatePeriod>({});
+  readonly completedCampaigns = computed(() => this.campaigns().filter(c => c.status === 'COMPLETED').length);
+  readonly readyCampaigns = computed(() => this.campaigns().filter(c => c.status === 'IMPORTED' || c.status === 'DRAFT').length);
+  readonly totalSentMessages = computed(() => this.campaigns().reduce((sum, c) => sum + (c.totalSent || 0), 0));
 
   constructor() {
-    effect(() => {
+    effect(onCleanup => {
       const companyId = this.workspace.selectedCompanyId();
-      if (companyId) {
-        this.loadCampaigns(companyId);
-      }
+      const period = this.period();
+      this.campaigns.set([]); this.error.set(''); this.loading.set(false);
+      if (!companyId) return;
+      this.loading.set(true);
+      const subscription = this.campaignService.findByCompany(companyId, period).subscribe({
+        next: campaigns => { this.campaigns.set(campaigns); this.loading.set(false); },
+        error: () => { this.loading.set(false); this.error.set('Impossible de charger les statistiques de cette p\u00e9riode.'); },
+      });
+      onCleanup(() => subscription.unsubscribe());
     });
   }
 
@@ -33,20 +47,8 @@ export class Dashboard {
     return this.workspace.activeCompany()?.smsBalance ?? 0;
   }
 
-  get completedCampaigns(): number {
-    return this.campaigns.filter((c) => c.status === 'COMPLETED').length;
-  }
-
-  get readyCampaigns(): number {
-    return this.campaigns.filter((c) => c.status === 'IMPORTED' || c.status === 'DRAFT').length;
-  }
-
-  get totalSentMessages(): number {
-    return this.campaigns.reduce((sum, c) => sum + (c.totalSent || 0), 0);
-  }
-
   countByChannel(ch: CampaignChannel): number {
-    return this.campaigns.filter((c) => (c.channel || 'SMS') === ch).length;
+    return this.campaigns().filter((c) => (c.channel || 'SMS') === ch).length;
   }
 
   statusLabel(status?: string): string {
@@ -67,10 +69,4 @@ export class Dashboard {
     return 'badge-soft-warning';
   }
 
-  private loadCampaigns(companyId: number): void {
-    this.campaignService.findByCompany(companyId).subscribe({
-      next: (campaigns) => (this.campaigns = campaigns),
-      error: () => (this.error = 'Impossible de charger les campagnes récentes.'),
-    });
-  }
 }

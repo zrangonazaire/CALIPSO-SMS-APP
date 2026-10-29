@@ -29,6 +29,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
+import com.calipso.statistics.StatisticsPeriod;
 import java.util.List;
 
 @RestController
@@ -158,9 +161,13 @@ public class CampaignController {
     }
 
     @GetMapping("/company/{companyId}")
-    public List<Campaign> findByCompany(@PathVariable Long companyId) {
+    public List<Campaign> findByCompany(@PathVariable Long companyId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         access.requireCompany(companyId);
-        var campaigns = campaignRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        var period = StatisticsPeriod.of(startDate, endDate);
+        var campaigns = startDate == null && endDate == null ? campaignRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
+                : campaignRepository.findForPeriod(companyId, period);
         campaigns.forEach(access::requireCampaign);
         return campaigns;
     }

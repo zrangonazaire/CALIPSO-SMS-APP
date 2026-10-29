@@ -1,3 +1,4 @@
+import { DatePeriod, periodParams } from '../models/date-period';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -12,7 +13,7 @@ export class SmsHistoryService {
 
   constructor(private http: HttpClient) {}
 
-  findByCompany(companyId: number): Observable<SmsSendHistory[]> {
-    return this.http.get<SmsSendHistory[]>(`${this.apiUrl}/company/${companyId}`);
+  findByCompany(companyId: number, period: DatePeriod = {}): Observable<SmsSendHistory[]> {
+    return this.http.get<SmsSendHistory[]>(`${this.apiUrl}/company/${companyId}`, { params: periodParams(period) });
   }
 }
