@@ -1,223 +1,313 @@
-<div class="container-fluid company-page">
+<div class="company-page">
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-      <h2 class="page-title mb-1">Comptes entreprise</h2>
-      <p class="text-muted mb-0">Creez les societes clientes, leurs utilisateurs et leurs profils de travail.</p>
+      <span class="eyebrow"><i class="bi bi-building-gear"></i> Paramètres & Sécurité</span>
+      <h2 class="page-title mb-1">Mon Espace, Équipe & Accès</h2>
+      <p class="text-muted mb-0">
+        Gérez les informations de votre organisation, les membres de votre équipe, leurs rôles et la réinitialisation des mots de passe.
+      </p>
     </div>
   </div>
 
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
-  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
+  <div class="alert alert-danger rounded-3" *ngIf="error"><i class="bi bi-exclamation-triangle me-2"></i>{{ error }}</div>
+  <div class="alert alert-success rounded-3" *ngIf="success"><i class="bi bi-check-circle-fill me-2"></i>{{ success }}</div>
 
-  <div class="row g-4">
-    <div class="col-xl-4">
-      <div class="card atlas-card mb-4">
-        <div class="card-body">
-          <h5 class="fw-bold mb-3">Nouvelle societe</h5>
+  <div class="account-summary mb-4" *ngIf="selectedCompany as company">
+    <div>
+      <span>Organisation active</span>
+      <strong>{{ company.name }}</strong>
+      <small>{{ company.businessType || 'Espace professionnel Calipso' }}</small>
+    </div>
+    <div>
+      <span>Utilisateur connecté</span>
+      <strong>{{ auth.currentUser()?.fullName || '-' }}</strong>
+      <small>{{ auth.currentUser()?.username }} · Rôle {{ auth.currentUser()?.role }}</small>
+    </div>
+    <div>
+      <span>Solde disponible</span>
+      <strong>{{ company.smsBalance || 0 }} crédits</strong>
+      <small>Expéditeur SMS : {{ company.senderPhone || 'Numéro par défaut' }}</small>
+    </div>
+  </div>
 
-          <label class="form-label">Raison sociale</label>
-          <input class="form-control mb-3" [(ngModel)]="form.name" placeholder="Ex: PIGIER CI">
+  <div class="calipso-card p-4">
+    <div class="tabs-bar mb-4">
+      <button type="button" [class.active]="activeTab === 'company'" (click)="activeTab = 'company'">
+        <i class="bi bi-sliders me-1"></i> Paramètres de l'organisation
+      </button>
+      <button type="button" [class.active]="activeTab === 'users'" (click)="activeTab = 'users'" *ngIf="workspace.canManageTeam()">
+        <i class="bi bi-people-fill me-1"></i> Membres de l'équipe ({{ users.length }})
+      </button>
+      <button type="button" [class.active]="activeTab === 'security'" (click)="activeTab = 'security'">
+        <i class="bi bi-shield-lock-fill me-1"></i> Mon Mot de passe & Sécurité
+      </button>
+      <button
+        type="button"
+        *ngIf="workspace.isPlatformAdmin()"
+        [class.active]="activeTab === 'admin-companies'"
+        (click)="activeTab = 'admin-companies'">
+        <i class="bi bi-buildings me-1"></i> Administration Multi-Sociétés ({{ companies.length }})
+      </button>
+    </div>
 
-          <label class="form-label">Contact principal</label>
-          <input class="form-control mb-3" [(ngModel)]="form.contactName" placeholder="Nom du responsable">
+    <!-- TAB 1: PARAMÈTRES ENTREPRISE -->
+    <section *ngIf="activeTab === 'company' && selectedCompany">
+      <div class="settings-form">
+        <h5 class="fw-bold mb-3">Coordonnées & Identité d'expéditeur</h5>
+        <div class="settings-grid">
+          <div>
+            <label class="form-label">Nom de l'entreprise / organisation</label>
+            <input class="form-control" [(ngModel)]="settingsForm.name">
+          </div>
+          <div>
+            <label class="form-label">Email de contact</label>
+            <input class="form-control" type="email" [(ngModel)]="settingsForm.email">
+          </div>
+          <div>
+            <label class="form-label">Téléphone principal</label>
+            <input class="form-control" [(ngModel)]="settingsForm.phone">
+          </div>
+          <div>
+            <label class="form-label">Numéro d'expéditeur SMS (Sender ID)</label>
+            <input class="form-control" [(ngModel)]="settingsForm.senderPhone" placeholder="+2250700000000">
+          </div>
+        </div>
 
-          <label class="form-label">Email</label>
-          <input class="form-control mb-3" [(ngModel)]="form.email" type="email" placeholder="contact@societe.ci">
+        <label class="form-label mt-3">Adresse géographique</label>
+        <textarea class="form-control" rows="2" [(ngModel)]="settingsForm.address"></textarea>
 
-          <label class="form-label">Telephone</label>
-          <input class="form-control mb-3" [(ngModel)]="form.phone" placeholder="+225...">
+        <button class="btn-atlas mt-3" (click)="updateCompanySettings()" [disabled]="!settingsForm.name.trim()">
+          <i class="bi bi-check2-circle"></i>
+          Enregistrer les modifications
+        </button>
+      </div>
+    </section>
 
-          <label class="form-label">Numero d'envoi SMS</label>
-          <input class="form-control mb-3" [(ngModel)]="form.senderPhone" placeholder="+225...">
+    <!-- TAB 2: GESTION DES UTILISATEURS & RÉINITIALISATION MDP -->
+    <section *ngIf="activeTab === 'users' && workspace.canManageTeam()">
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="p-3 rounded-4 border bg-light">
+            <h5 class="fw-bold mb-3"><i class="bi bi-person-plus-fill text-primary me-1"></i> Inviter un collaborateur</h5>
+            <label class="form-label">Nom complet</label>
+            <input class="form-control mb-2" [(ngModel)]="userForm.fullName" placeholder="Ex: Kouadio Jean">
 
-          <label class="form-label">Secteur d'activite</label>
-          <input class="form-control mb-3" [(ngModel)]="form.businessType" placeholder="Education, commerce, banque...">
+            <label class="form-label">Identifiant de connexion</label>
+            <input class="form-control mb-2" [(ngModel)]="userForm.username" placeholder="jean.kouadio">
 
-          <label class="form-label">Adresse</label>
-          <textarea class="form-control mb-4" rows="2" [(ngModel)]="form.address"></textarea>
+            <label class="form-label">Email professionnel</label>
+            <input class="form-control mb-2" type="email" [(ngModel)]="userForm.email" placeholder="jean@societe.ci">
 
-          <button class="btn btn-atlas w-100" (click)="createCompany()">Creer le compte</button>
+            <label class="form-label">Téléphone (pour code OTP SMS/WhatsApp)</label>
+            <input class="form-control mb-2" [(ngModel)]="userForm.phone" placeholder="+2250708091011">
+
+            <label class="form-label">Mot de passe initial</label>
+            <input class="form-control mb-2" type="password" [(ngModel)]="userForm.password" autocomplete="new-password">
+
+            <label class="form-label">Rôle d'accès</label>
+            <select class="form-select mb-3" [(ngModel)]="userForm.role">
+              <option *ngFor="let role of roles" [ngValue]="role">{{ role }}</option>
+            </select>
+
+            <button
+              class="btn-atlas w-100"
+              (click)="createUser()"
+              [disabled]="!selectedCompanyId || !userForm.password || !userForm.username.trim()">
+              <i class="bi bi-person-check-fill"></i>
+              Créer le compte collaborateur
+            </button>
+          </div>
+        </div>
+
+        <div class="col-lg-8">
+          <h5 class="fw-bold mb-3">Membres ayant accès à cet espace</h5>
+
+          <!-- Encart de réinitialisation rapide d'un mot de passe par l'admin -->
+          <div class="p-3 mb-3 rounded-3 border border-primary bg-primary bg-opacity-10" *ngIf="resetTargetUser as target">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <strong>
+                <i class="bi bi-key-fill text-primary me-1"></i>
+                Définir un nouveau mot de passe pour {{ target.fullName }} ({{ target.username }})
+              </strong>
+              <button type="button" class="btn-close" (click)="resetTargetUser = undefined"></button>
+            </div>
+            <div class="d-flex gap-2">
+              <input
+                type="password"
+                class="form-control"
+                [(ngModel)]="adminResetPasswordValue"
+                placeholder="Saisissez le nouveau mot de passe temporaire...">
+              <button
+                type="button"
+                class="btn-atlas"
+                [disabled]="!adminResetPasswordValue.trim()"
+                (click)="confirmAdminReset()">
+                Valider
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead>
+                <tr>
+                  <th>Collaborateur</th>
+                  <th>Contact</th>
+                  <th>Rôle</th>
+                  <th>Statut</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let user of users">
+                  <td>
+                    <div class="fw-semibold">{{ user.fullName }}</div>
+                    <small class="text-muted">@{{ user.username }}</small>
+                  </td>
+                  <td>
+                    <div class="small">{{ user.email }}</div>
+                    <small class="text-muted">{{ user.phone || 'Téléphone non défini' }}</small>
+                  </td>
+                  <td>
+                    <select
+                      class="form-select form-select-sm"
+                      style="width: 130px;"
+                      [ngModel]="user.role"
+                      (ngModelChange)="changeUserRole(user, $event)">
+                      <option *ngFor="let role of roles" [ngValue]="role">{{ role }}</option>
+                    </select>
+                  </td>
+                  <td>
+                    <span class="badge" [ngClass]="user.active ? 'badge-soft-success' : 'badge-soft-danger'">
+                      {{ user.active ? 'Actif' : 'Suspendu' }}
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-inline-flex gap-1">
+                      <button
+                        type="button"
+                        class="btn-ghost btn-sm"
+                        title="Réinitialiser le mot de passe"
+                        (click)="openAdminReset(user)">
+                        <i class="bi bi-key"></i> Réinitialiser MDP
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-ghost btn-sm"
+                        (click)="toggleUser(user)">
+                        {{ user.active ? 'Suspendre' : 'Activer' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        title="Supprimer l'utilisateur"
+                        (click)="deleteUser(user)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                <tr *ngIf="users.length === 0">
+                  <td colspan="5" class="text-center text-muted py-4">Aucun membre enregistré.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="card atlas-card">
-        <div class="card-body">
-          <h5 class="fw-bold mb-3">Societes clientes</h5>
+    <!-- TAB 3: MON MOT DE PASSE & SÉCURITÉ -->
+    <section *ngIf="activeTab === 'security'">
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <h5 class="fw-bold mb-1">Modifier mon mot de passe</h5>
+          <p class="text-muted small mb-3">
+            Changez le mot de passe de votre compte <strong>{{ auth.currentUser()?.username }}</strong> à tout moment.
+          </p>
 
+          <label class="form-label">Mot de passe actuel</label>
+          <input
+            type="password"
+            class="form-control mb-3"
+            [(ngModel)]="passwordForm.currentPassword"
+            placeholder="••••••••">
+
+          <label class="form-label">Nouveau mot de passe</label>
+          <input
+            type="password"
+            class="form-control mb-3"
+            [(ngModel)]="passwordForm.newPassword"
+            placeholder="Choisissez un nouveau mot de passe">
+
+          <label class="form-label">Confirmer le nouveau mot de passe</label>
+          <input
+            type="password"
+            class="form-control mb-4"
+            [(ngModel)]="passwordForm.confirmPassword"
+            placeholder="Confirmez le nouveau mot de passe">
+
+          <button class="btn-atlas" (click)="updateMyPassword()">
+            <i class="bi bi-shield-check"></i>
+            Mettre à jour mon mot de passe
+          </button>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="p-4 rounded-4 border bg-light h-100">
+            <h6 class="fw-bold mb-2"><i class="bi bi-info-circle-fill text-primary me-1"></i> Comment fonctionne la récupération de mot de passe ?</h6>
+            <p class="small text-muted mb-3">
+              Calipso intègre deux mécanismes complémentaires pour qu'aucun utilisateur ne soit jamais bloqué :
+            </p>
+            <ul class="small text-secondary d-grid gap-2 mb-0">
+              <li>
+                <strong>1. En autonomie depuis l'écran de connexion ("Mot de passe oublié ?") :</strong>
+                l'utilisateur saisit son identifiant ou son email, choisit son canal préféré (<strong>Email, SMS ou WhatsApp</strong>), reçoit un code de sécurité à 6 chiffres valable 15 minutes et définit immédiatement son nouveau mot de passe.
+              </li>
+              <li>
+                <strong>2. Par le responsable d'espace (onglet "Membres de l'équipe") :</strong>
+                un Administrateur ou Manager peut cliquer sur <em>"Réinitialiser MDP"</em> sur la ligne d'un collaborateur pour lui attribuer un nouveau mot de passe en 1 clic.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MULTI-SOCIÉTÉS (ADMIN) -->
+    <section *ngIf="activeTab === 'admin-companies' && workspace.isPlatformAdmin()">
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <h5 class="fw-bold mb-3">Créer un nouveau compte client</h5>
+          <label class="form-label">Raison sociale</label>
+          <input class="form-control mb-2" [(ngModel)]="form.name" placeholder="Ex: Groupe Scolaire...">
+          <label class="form-label">Responsable</label>
+          <input class="form-control mb-2" [(ngModel)]="form.contactName">
+          <label class="form-label">Email</label>
+          <input class="form-control mb-2" type="email" [(ngModel)]="form.email">
+          <label class="form-label">Téléphone</label>
+          <input class="form-control mb-3" [(ngModel)]="form.phone">
+          <button class="btn-atlas w-100" (click)="createCompany()">Créer l'espace client</button>
+        </div>
+
+        <div class="col-lg-7">
+          <h5 class="fw-bold mb-3">Espaces clients de la plateforme</h5>
           <div class="company-list">
             <button
               type="button"
               class="company-item"
               *ngFor="let company of companies"
               [class.active]="company.id === selectedCompanyId"
-              (click)="selectedCompanyId = company.id || 0; loadCompanyContext()">
+              (click)="selectCompany(company.id || 0)">
               <div>
                 <strong>{{ company.name }}</strong>
-                <span>{{ company.contactName || company.email || 'Compte client' }}</span>
+                <span>{{ company.contactName || company.email || 'Espace client' }}</span>
               </div>
-              <em>{{ company.smsBalance || 0 }} SMS</em>
+              <em>{{ company.smsBalance || 0 }} crédits</em>
             </button>
           </div>
-
-          <div class="text-center text-muted py-4" *ngIf="!loading && companies.length === 0">
-            Aucune societe creee.
-          </div>
         </div>
       </div>
-    </div>
-
-    <div class="col-xl-8">
-      <div class="account-summary" *ngIf="selectedCompany as company">
-        <div>
-          <span>Compte selectionne</span>
-          <strong>{{ company.name }}</strong>
-          <small>{{ company.businessType || 'Secteur non renseigne' }}</small>
-        </div>
-        <div>
-          <span>Responsable</span>
-          <strong>{{ company.contactName || '-' }}</strong>
-          <small>{{ company.email || '-' }}</small>
-        </div>
-        <div>
-          <span>Solde SMS</span>
-          <strong>{{ company.smsBalance || 0 }}</strong>
-          <small>Envoi: {{ company.senderPhone || 'numero non defini' }}</small>
-        </div>
-      </div>
-
-      <div class="card atlas-card">
-        <div class="card-body">
-          <div class="tabs-bar">
-            <button [class.active]="activeTab === 'company'" (click)="activeTab = 'company'">Informations</button>
-            <button [class.active]="activeTab === 'users'" (click)="activeTab = 'users'">Utilisateurs</button>
-            <button [class.active]="activeTab === 'profiles'" (click)="activeTab = 'profiles'">Profils Excel</button>
-          </div>
-
-          <section *ngIf="activeTab === 'company' && selectedCompany as company">
-            <div class="details-grid">
-              <div><span>Raison sociale</span><strong>{{ company.name }}</strong></div>
-              <div><span>Email</span><strong>{{ company.email || '-' }}</strong></div>
-              <div><span>Telephone</span><strong>{{ company.phone || '-' }}</strong></div>
-              <div class="sender-setting" [class.missing]="!company.senderPhone">
-                <span>Numero d'envoi SMS</span>
-                <strong>{{ company.senderPhone || 'A definir avant les envois' }}</strong>
-              </div>
-              <div><span>Adresse</span><strong>{{ company.address || '-' }}</strong></div>
-              <div><span>Statut</span><strong>{{ company.active ? 'Actif' : 'Inactif' }}</strong></div>
-              <div><span>Date creation</span><strong>{{ company.createdAt | date:'dd/MM/yyyy' }}</strong></div>
-            </div>
-
-            <div class="settings-form mt-4">
-              <h5 class="fw-bold mb-3">Parametres entreprise</h5>
-              <div class="settings-grid">
-                <div>
-                  <label class="form-label">Raison sociale</label>
-                  <input class="form-control" [(ngModel)]="settingsForm.name">
-                </div>
-                <div>
-                  <label class="form-label">Email</label>
-                  <input class="form-control" type="email" [(ngModel)]="settingsForm.email">
-                </div>
-                <div>
-                  <label class="form-label">Telephone contact</label>
-                  <input class="form-control" [(ngModel)]="settingsForm.phone">
-                </div>
-                <div>
-                  <label class="form-label">Numero d'envoi SMS</label>
-                  <input class="form-control" [(ngModel)]="settingsForm.senderPhone" placeholder="+2250700000000">
-                </div>
-              </div>
-
-              <label class="form-label mt-3">Adresse</label>
-              <textarea class="form-control" rows="2" [(ngModel)]="settingsForm.address"></textarea>
-
-              <button class="btn btn-atlas mt-3" (click)="updateCompanySettings()" [disabled]="!settingsForm.name.trim()">
-                Enregistrer les parametres
-              </button>
-            </div>
-          </section>
-
-          <section *ngIf="activeTab === 'users'">
-            <div class="row g-4">
-              <div class="col-lg-5">
-                <h5 class="fw-bold mb-3">Nouvel utilisateur</h5>
-                <label class="form-label">Nom complet</label>
-                <input class="form-control mb-3" [(ngModel)]="userForm.fullName">
-
-                <label class="form-label">Identifiant</label>
-                <input class="form-control mb-3" [(ngModel)]="userForm.username">
-
-                <label class="form-label">Email</label>
-                <input class="form-control mb-3" type="email" [(ngModel)]="userForm.email">
-
-                <label class="form-label">Mot de passe initial</label>
-                <input class="form-control mb-3" type="password" [(ngModel)]="userForm.password" autocomplete="new-password">
-
-                <label class="form-label">Telephone</label>
-                <input class="form-control mb-3" [(ngModel)]="userForm.phone">
-
-                <label class="form-label">Role</label>
-                <select class="form-select mb-4" [(ngModel)]="userForm.role">
-                  <option *ngFor="let role of roles" [ngValue]="role">{{ role }}</option>
-                </select>
-
-                <button
-                  class="btn btn-atlas w-100"
-                  (click)="createUser()"
-                  [disabled]="!selectedCompanyId || !userForm.password">
-                  Ajouter l'utilisateur
-                </button>
-              </div>
-
-              <div class="col-lg-7">
-                <h5 class="fw-bold mb-3">Utilisateurs du compte</h5>
-                <div class="table-responsive">
-                  <table class="table align-middle">
-                    <thead><tr><th>Nom</th><th>Identifiant</th><th>Role</th><th>Statut</th><th></th></tr></thead>
-                    <tbody>
-                      <tr *ngFor="let user of users">
-                        <td class="fw-semibold">{{ user.fullName }}</td>
-                        <td>{{ user.username }}</td>
-                        <td><span class="badge badge-soft-primary">{{ user.role }}</span></td>
-                        <td>{{ user.active ? 'Actif' : 'Suspendu' }}</td>
-                        <td>
-                          <button class="btn btn-sm btn-outline-primary" (click)="toggleUser(user)">
-                            {{ user.active ? 'Suspendre' : 'Activer' }}
-                          </button>
-                        </td>
-                      </tr>
-                      <tr *ngIf="users.length === 0">
-                        <td colspan="5" class="text-center text-muted py-4">Aucun utilisateur.</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section *ngIf="activeTab === 'profiles'">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-              <h5 class="fw-bold mb-0">Profils Excel rattaches</h5>
-              <a class="btn btn-sm btn-atlas" routerLink="/import-profiles">Gerer les profils</a>
-            </div>
-
-            <table class="table align-middle">
-              <thead><tr><th>Nom</th><th>Description</th><th>Statut</th></tr></thead>
-              <tbody>
-                <tr *ngFor="let profile of profiles">
-                  <td class="fw-semibold">{{ profile.name }}</td>
-                  <td>{{ profile.description || '-' }}</td>
-                  <td><span class="badge badge-soft-success">{{ profile.active ? 'Actif' : 'Inactif' }}</span></td>
-                </tr>
-                <tr *ngIf="profiles.length === 0">
-                  <td colspan="3" class="text-center text-muted py-4">Aucun profil pour cette societe.</td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-        </div>
-      </div>
-    </div>
+    </section>
   </div>
 </div>

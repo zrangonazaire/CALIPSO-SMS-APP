@@ -1,47 +1,275 @@
-<main class="login-page">
-  <section class="login-visual">
-    <div class="brand-mark">
-      <i class="bi bi-chat-dots-fill"></i>
+<main class="auth-layout">
+  <section class="auth-showcase">
+    <div class="showcase-brand">
+      <div class="logo-box">
+        <i class="bi bi-send-check-fill"></i>
+      </div>
+      <span>Calipso Studio<strong>.</strong></span>
     </div>
-    <h1>Calipso SMS</h1>
-    <p>Pilotage securise des entreprises, profils de campagne, credits et envois SMS.</p>
+
+    <div class="showcase-hero">
+      <div class="channel-tags">
+        <span class="tag-sms"><i class="bi bi-chat-dots-fill"></i> SMS Pro</span>
+        <span class="tag-wa"><i class="bi bi-whatsapp"></i> WhatsApp Business</span>
+        <span class="tag-mail"><i class="bi bi-envelope-paper-heart-fill"></i> Email Marketing</span>
+      </div>
+
+      <h1>Touchez vos clients au bon moment, sur leur canal préféré.</h1>
+      <p>
+        Importez votre fichier Excel ou vos contacts en 1 clic, personnalisez votre message avec aperçu iPhone en direct, et diffusez vos campagnes instantanément.
+      </p>
+
+      <div class="feature-cards">
+        <div class="feature-item">
+          <i class="bi bi-magic"></i>
+          <div>
+            <strong>Zéro configuration technique</strong>
+            <span>Détection automatique des colonnes Téléphone, Email et Prénom depuis Excel/CSV.</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <i class="bi bi-phone-fill"></i>
+          <div>
+            <strong>Aperçu Smartphone en temps réel</strong>
+            <span>Visualisez le rendu exact sur SMS, WhatsApp et Email avant l'envoi.</span>
+          </div>
+        </div>
+        <div class="feature-item">
+          <i class="bi bi-shield-check"></i>
+          <div>
+            <strong>Gestion d'équipe & Récupération multicanale</strong>
+            <span>Réinitialisation de mot de passe par code OTP (Email, SMS ou WhatsApp) et contrôle des rôles.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="showcase-footer">
+      <span>© 2026 Calipso Omnichannel Studio · Conçu pour les entreprises, écoles & commerçants</span>
+    </div>
   </section>
 
-  <section class="login-panel">
-    <form class="login-card" (ngSubmit)="setupMode ? setupAdmin() : submit()">
-      <span class="eyebrow">{{ setupMode ? 'Initialisation' : 'Connexion' }}</span>
-      <h2>{{ setupMode ? 'Premier administrateur' : 'Acces utilisateur' }}</h2>
-      <p>{{ setupMode ? 'Creez le premier compte securise de la plateforme.' : 'Connectez-vous avec le compte cree dans les parametres entreprise.' }}</p>
+  <section class="auth-form-pane">
+    <div class="auth-card">
+      <div class="auth-mode-tabs" *ngIf="mode !== 'forgot'">
+        <button type="button" [class.active]="mode === 'login'" (click)="switchMode('login')">
+          Connexion
+        </button>
+        <button type="button" [class.active]="mode === 'register'" (click)="switchMode('register')">
+          Créer un compte gratuit
+        </button>
+      </div>
 
-      <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+      <!-- Alertes -->
+      <div class="alert alert-danger py-2 px-3 small rounded-3" *ngIf="error">
+        <i class="bi bi-exclamation-circle me-1"></i> {{ error }}
+      </div>
+      <div class="alert alert-success py-2 px-3 small rounded-3" *ngIf="info">
+        <i class="bi bi-check-circle-fill me-1"></i> {{ info }}
+      </div>
 
-      <ng-container *ngIf="setupMode">
-        <label class="form-label">Entreprise</label>
-        <input class="form-control" name="companyName" [(ngModel)]="setupForm.companyName" placeholder="Ex: PIGIER CI">
+      <!-- MODE 1 : CONNEXION -->
+      <form *ngIf="mode === 'login'" (ngSubmit)="submit()">
+        <div class="auth-heading">
+          <h2>Bon retour sur Calipso</h2>
+          <p>Accédez à votre studio de campagnes SMS, WhatsApp et Email.</p>
+        </div>
 
-        <label class="form-label mt-3">Nom complet</label>
-        <input class="form-control" name="fullName" [(ngModel)]="setupForm.fullName" placeholder="Administrateur principal">
+        <div class="mb-3">
+          <label class="form-label">Identifiant ou Email</label>
+          <input
+            class="form-control"
+            name="username"
+            autocomplete="username"
+            [(ngModel)]="form.username"
+            placeholder="Votre identifiant ou adresse email">
+        </div>
 
-        <label class="form-label mt-3">Email</label>
-        <input class="form-control" name="email" type="email" [(ngModel)]="setupForm.email" placeholder="admin@societe.ci">
-      </ng-container>
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label mb-0">Mot de passe</label>
+            <button
+              type="button"
+              class="btn-forgot-link"
+              (click)="forgotForm.identifier = form.username; switchMode('forgot')">
+              Mot de passe oublié ?
+            </button>
+          </div>
+          <input
+            class="form-control"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            [(ngModel)]="form.password"
+            placeholder="••••••••">
+        </div>
 
-      <label class="form-label" [class.mt-3]="setupMode">Identifiant</label>
-      <input *ngIf="setupMode" class="form-control" name="setupUsername" autocomplete="username" [(ngModel)]="setupForm.username" placeholder="nom.utilisateur">
-      <input *ngIf="!setupMode" class="form-control" name="username" autocomplete="username" [(ngModel)]="form.username" placeholder="nom.utilisateur">
+        <button class="btn-atlas w-100 py-3" type="submit" [disabled]="loading">
+          <i class="bi bi-arrow-right-circle-fill"></i>
+          <span>{{ loading ? 'Connexion en cours...' : 'Accéder à mon espace' }}</span>
+        </button>
+      </form>
 
-      <label class="form-label mt-3">Mot de passe</label>
-      <input *ngIf="setupMode" class="form-control" name="setupPassword" type="password" autocomplete="new-password" [(ngModel)]="setupForm.password" placeholder="Votre mot de passe">
-      <input *ngIf="!setupMode" class="form-control" name="password" type="password" autocomplete="current-password" [(ngModel)]="form.password" placeholder="Votre mot de passe">
+      <!-- MODE 2 : INSCRIPTION GRATUITE -->
+      <form *ngIf="mode === 'register'" (ngSubmit)="registerAccount()">
+        <div class="auth-heading">
+          <h2>Démarrez gratuitement</h2>
+          <p>Créez votre espace en 30 secondes et recevez 50 crédits de bienvenue.</p>
+        </div>
 
-      <button class="btn btn-atlas w-100 mt-4" type="submit" [disabled]="loading">
-        <i class="bi bi-shield-lock"></i>
-        {{ loading ? 'Traitement...' : (setupMode ? 'Creer et entrer' : 'Se connecter') }}
-      </button>
+        <div class="welcome-bonus">
+          <i class="bi bi-gift-fill"></i>
+          <span><strong>50 crédits offerts</strong> dès l'ouverture de votre compte !</span>
+        </div>
 
-      <button class="btn btn-link w-100 mt-2" type="button" (click)="setupMode = !setupMode; error = ''">
-        {{ setupMode ? 'J ai deja un compte' : 'Initialiser le premier administrateur' }}
-      </button>
-    </form>
+        <div class="mb-3">
+          <label class="form-label">Nom de votre entreprise, école ou activité</label>
+          <input
+            class="form-control"
+            name="companyName"
+            [(ngModel)]="setupForm.companyName"
+            placeholder="Ex: Boutique Akwaba / Institut Pigier">
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-sm-6">
+            <label class="form-label">Votre nom complet</label>
+            <input class="form-control" name="fullName" [(ngModel)]="setupForm.fullName" placeholder="Ex: Marc Konan">
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label">Email professionnel</label>
+            <input class="form-control" name="email" type="email" [(ngModel)]="setupForm.email" placeholder="contact@domaine.ci">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Identifiant de connexion</label>
+          <input
+            class="form-control"
+            name="setupUsername"
+            autocomplete="username"
+            [(ngModel)]="setupForm.username"
+            placeholder="Ex: marc.konan">
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label">Mot de passe</label>
+          <input
+            class="form-control"
+            name="setupPassword"
+            type="password"
+            autocomplete="new-password"
+            [(ngModel)]="setupForm.password"
+            placeholder="Choisissez un mot de passe sécurisé">
+        </div>
+
+        <button class="btn-atlas w-100 py-3" type="submit" [disabled]="loading">
+          <i class="bi bi-rocket-takeoff-fill"></i>
+          <span>{{ loading ? 'Création en cours...' : 'Créer mon espace & recevoir 50 crédits' }}</span>
+        </button>
+      </form>
+
+      <!-- MODE 3 : MOT DE PASSE OUBLIÉ (OTP MULTICANAL) -->
+      <div *ngIf="mode === 'forgot'">
+        <div class="auth-heading">
+          <span class="eyebrow mb-2"><i class="bi bi-shield-lock-fill"></i> Récupération sécurisée</span>
+          <h2>Mot de passe oublié ?</h2>
+          <p *ngIf="forgotStep === 1">
+            Recevez un code de sécurité à 6 chiffres sur votre Email, par SMS ou sur WhatsApp pour définir un nouveau mot de passe.
+          </p>
+          <p *ngIf="forgotStep === 2">
+            Saisissez le code à 6 chiffres envoyé sur <strong>{{ maskedDestination }}</strong> puis choisissez votre nouveau mot de passe.
+          </p>
+        </div>
+
+        <!-- Étape 1 : Demander le code -->
+        <form *ngIf="forgotStep === 1" (ngSubmit)="requestResetCode()">
+          <div class="mb-3">
+            <label class="form-label">Votre identifiant ou adresse email</label>
+            <input
+              class="form-control"
+              name="forgotIdentifier"
+              [(ngModel)]="forgotForm.identifier"
+              placeholder="Ex: marc.konan ou contact@societe.ci">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Comment souhaitez-vous recevoir votre code ?</label>
+            <div class="recovery-channels">
+              <button
+                type="button"
+                [class.active]="forgotForm.channel === 'EMAIL'"
+                (click)="forgotForm.channel = 'EMAIL'">
+                <i class="bi bi-envelope-fill"></i> Email
+              </button>
+              <button
+                type="button"
+                [class.active]="forgotForm.channel === 'SMS'"
+                (click)="forgotForm.channel = 'SMS'">
+                <i class="bi bi-chat-dots-fill"></i> SMS
+              </button>
+              <button
+                type="button"
+                [class.active]="forgotForm.channel === 'WHATSAPP'"
+                (click)="forgotForm.channel = 'WHATSAPP'">
+                <i class="bi bi-whatsapp"></i> WhatsApp
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-atlas w-100 py-3" type="submit" [disabled]="loading">
+            <i class="bi bi-send-check-fill"></i>
+            <span>{{ loading ? 'Envoi du code...' : 'Recevoir mon code à 6 chiffres' }}</span>
+          </button>
+        </form>
+
+        <!-- Étape 2 : Valider le code OTP et changer le mot de passe -->
+        <form *ngIf="forgotStep === 2" (ngSubmit)="confirmResetPassword()">
+          <div class="otp-hint-box mb-3" *ngIf="devCodeHint">
+            <div>
+              <i class="bi bi-key-fill text-primary me-1"></i>
+              <small>Code OTP généré : <strong>{{ devCodeHint }}</strong></small>
+            </div>
+            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" (click)="forgotForm.code = devCodeHint">
+              Utiliser ce code
+            </button>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Code de sécurité à 6 chiffres</label>
+            <input
+              class="form-control otp-input"
+              name="otpCode"
+              maxlength="6"
+              [(ngModel)]="forgotForm.code"
+              placeholder="000000">
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">Nouveau mot de passe</label>
+            <input
+              class="form-control"
+              name="newPassword"
+              type="password"
+              autocomplete="new-password"
+              [(ngModel)]="forgotForm.newPassword"
+              placeholder="Saisissez votre nouveau mot de passe">
+          </div>
+
+          <button class="btn-atlas w-100 py-3" type="submit" [disabled]="loading">
+            <i class="bi bi-check2-circle"></i>
+            <span>{{ loading ? 'Validation...' : 'Enregistrer & Se connecter' }}</span>
+          </button>
+        </form>
+
+        <button
+          type="button"
+          class="btn-ghost w-100 justify-content-center mt-3"
+          (click)="switchMode('login')">
+          <i class="bi bi-arrow-left"></i>
+          Retour à la connexion
+        </button>
+      </div>
+    </div>
   </section>
 </main>

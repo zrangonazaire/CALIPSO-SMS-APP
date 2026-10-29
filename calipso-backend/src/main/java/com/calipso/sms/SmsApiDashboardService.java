@@ -1,6 +1,7 @@
 package com.calipso.sms;
 
 import com.calipso.compagny.Company;
+import com.calipso.auth.CompanyAccess;
 import com.calipso.compagny.CompanyRepository;
 import com.calipso.recipient.RecipientStatus;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import com.calipso.statistics.StatisticsPeriod;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -21,31 +25,48 @@ public class SmsApiDashboardService {
     private final CompanyRepository companyRepository;
     private final SmsSendHistoryRepository historyRepository;
     private final OrangeSmsClient orangeSmsClient;
+    private final CompanyAccess access;
 
     @Transactional
     public SmsApiDashboardResponse getDashboard(Long companyId) {
+        return getDashboard(companyId, null, null);
+    }
+
+    @Transactional
+    public SmsApiDashboardResponse getDashboard(Long companyId, LocalDate startDate, LocalDate endDate) {
+        access.requireCompany(companyId);
+        var period = StatisticsPeriod.of(startDate, endDate);
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
 
-        List<OrangeSmsContract> contracts = orangeSmsClient.fetchSmsContracts();
-        int orangeBalance = contracts.stream()
-                .filter(contract -> "ACTIVE".equalsIgnoreCase(contract.status()))
-                .mapToInt(contract -> contract.availableUnits() == null ? 0 : contract.availableUnits())
-                .sum();
-
+        List<OrangeSmsContract> contracts = Collections.emptyList();
         int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
-        if (orangeBalance != currentBalance) {
-            log.info(
-                    "[SMS API] Synchronisation solde: companyId={}, ancienSolde={}, soldeOrange={}",
-                    company.getId(),
-                    currentBalance,
-                    orangeBalance
-            );
-            company.setSmsBalance(orangeBalance);
-            companyRepository.save(company);
+        int effectiveBalance = currentBalance;
+
+        if (access.isPlatformAdmin()) try {
+            contracts = orangeSmsClient.fetchSmsContracts();
+            int orangeBalance = contracts.stream()
+                    .filter(contract -> "ACTIVE".equalsIgnoreCase(contract.status()))
+                    .mapToInt(contract -> contract.availableUnits() == null ? 0 : contract.availableUnits())
+                    .sum();
+
+            if (orangeBalance > currentBalance) {
+                log.info(
+                        "[SMS API] Synchronisation solde: companyId={}, ancienSolde={}, soldeOrange={}",
+                        company.getId(),
+                        currentBalance,
+                        orangeBalance
+                );
+                company.setSmsBalance(orangeBalance);
+                companyRepository.save(company);
+                effectiveBalance = orangeBalance;
+            }
+        } catch (Exception e) {
+            log.warn("[SMS API] Contrats Orange non joignables actuellement: {}", e.getMessage());
         }
 
-        List<SmsSendHistory> history = historyRepository.findByCompanyIdOrderByCreatedAtDesc(companyId);
+        List<SmsSendHistory> history = startDate == null && endDate == null ? historyRepository.findByCompanyIdOrderByCreatedAtDesc(companyId)
+                : historyRepository.findForPeriod(companyId, period);
         int totalMessages = history.size();
         int acceptedMessages = countByStatus(history, RecipientStatus.SENT) + countByStatus(history, RecipientStatus.DELIVERED);
         int deliveredMessages = countByStatus(history, RecipientStatus.DELIVERED);
@@ -54,13 +75,13 @@ public class SmsApiDashboardService {
         int consumedSegments = sumSegmentsByAcceptedStatus(history);
         int failedSegments = sumSegmentsByStatus(history, RecipientStatus.FAILED) + sumSegmentsByStatus(history, RecipientStatus.INVALID);
         double successRate = totalMessages == 0 ? 0 : (acceptedMessages * 100.0) / totalMessages;
-        LocalDateTime lastActivityAt = history.isEmpty() ? null : history.getFirst().getCreatedAt();
+        LocalDateTime lastActivityAt = history.isEmpty() ? null : (history.getFirst().getSentAt() == null ? history.getFirst().getCreatedAt() : history.getFirst().getSentAt());
 
         return new SmsApiDashboardResponse(
                 company.getId(),
                 company.getName(),
                 company.getSenderPhone(),
-                orangeBalance,
+                effectiveBalance,
                 totalMessages,
                 acceptedMessages,
                 deliveredMessages,
@@ -71,7 +92,7 @@ public class SmsApiDashboardService {
                 Math.round(successRate * 10.0) / 10.0,
                 lastActivityAt,
                 contracts.stream().map(SmsApiDashboardResponse.OrangeContractResponse::from).toList(),
-                history.stream().limit(8).map(SmsSendHistoryResponse::from).toList()
+                history.stream().limit(12).map(SmsSendHistoryResponse::from).toList()
         );
     }
 

@@ -1,34 +1,38 @@
-<div class="container-fluid history-page">
+<div class="history-page">
   <header class="history-header">
     <div>
-      <span class="eyebrow">Historique SMS</span>
-      <h2 class="page-title mb-1">Journal des envois</h2>
-      <p class="text-muted mb-0">Consultez les SMS envoyes par campagne et par envoi cible.</p>
+      <span class="eyebrow"><i class="bi bi-activity"></i> Suivi temps réel</span>
+      <h2 class="page-title mb-1">Journal d'activité multicanal</h2>
+      <p class="text-muted mb-0">Retrouvez l'historique complet de vos diffusions SMS, WhatsApp et Email.</p>
     </div>
   </header>
 
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
+  <app-period-filter idPrefix="history-period" basis="Envois et tentatives effectués pendant la période. Les autres filtres restent cumulables." (periodChange)="period.set($event)" />
+  <div class="alert alert-danger" *ngIf="error()">{{ error() }}</div>
 
-  <section class="history-toolbar">
+  <section class="history-toolbar calipso-card p-3">
     <div>
-      <label class="form-label">Entreprise</label>
-      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadHistory()">
-        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
+      <label class="form-label">Canal</label>
+      <select class="form-select" [ngModel]="channelFilter()" (ngModelChange)="channelFilter.set($event)">
+        <option value="ALL">Tous les canaux</option>
+        <option value="SMS">SMS Pro</option>
+        <option value="WHATSAPP">WhatsApp</option>
+        <option value="EMAIL">Email</option>
       </select>
     </div>
 
     <div>
-      <label class="form-label">Type</label>
-      <select class="form-select" [(ngModel)]="sourceFilter">
-        <option value="ALL">Tous les envois</option>
+      <label class="form-label">Origine</label>
+      <select class="form-select" [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">
+        <option value="ALL">Toutes les origines</option>
         <option value="CAMPAIGN">Campagnes</option>
-        <option value="MANUAL">Envois cibles</option>
+        <option value="MANUAL">Envoi Express</option>
       </select>
     </div>
 
     <div>
       <label class="form-label">Statut</label>
-      <select class="form-select" [(ngModel)]="statusFilter">
+      <select class="form-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
         <option value="ALL">Tous les statuts</option>
         <option *ngFor="let status of statuses" [value]="status">{{ statusLabel(status) }}</option>
       </select>
@@ -36,61 +40,62 @@
 
     <div>
       <label class="form-label">Recherche</label>
-      <input class="form-control" [(ngModel)]="search" placeholder="Numero, campagne, contenu...">
+      <input class="form-control" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Numéro, email, campagne, texte...">
     </div>
   </section>
 
   <section class="metric-grid">
     <article class="metric-card">
-      <span>Envois affiches</span>
-      <strong>{{ filteredHistory.length }}</strong>
+      <span>Messages affichés</span>
+      <strong>{{ filteredHistory().length }}</strong>
     </article>
     <article class="metric-card">
-      <span>Campagnes</span>
+      <span>Via Campagnes</span>
       <strong>{{ campaignCount }}</strong>
     </article>
     <article class="metric-card">
-      <span>Envois cibles</span>
+      <span>Via Envoi Express</span>
       <strong>{{ manualCount }}</strong>
     </article>
     <article class="metric-card">
-      <span>Segments consommes</span>
+      <span>Crédits consommés</span>
       <strong>{{ totalSegments }}</strong>
     </article>
   </section>
 
-  <section class="history-list atlas-card">
-    <div class="list-head">
-      <h5>Details des SMS</h5>
-      <span *ngIf="loading">Chargement...</span>
+  <section class="history-list calipso-card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="fw-bold mb-0">Détail des messages</h5>
+      <span class="text-muted small" *ngIf="loading()">Actualisation...</span>
     </div>
 
-    <div class="history-row" *ngFor="let item of filteredHistory">
+    <div class="history-row" *ngFor="let item of filteredHistory()">
       <div class="history-main">
         <div class="history-topline">
+          <span class="channel-pill" [ngClass]="(item.channel || 'SMS').toLowerCase()">
+            {{ item.channel || 'SMS' }}
+          </span>
           <strong>{{ item.phoneNumber }}</strong>
           <span class="badge" [ngClass]="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
           <span class="badge badge-soft-primary">{{ sourceLabel(item.source) }}</span>
         </div>
-        <p>{{ item.message }}</p>
-        <small>
-          {{ item.campaignName || 'Envoi sans campagne' }} - {{ (item.sentAt || item.createdAt) | date:'dd/MM/yyyy HH:mm' }}
+        <div class="small fw-semibold text-dark mt-1" *ngIf="item.subject">Objet : {{ item.subject }}</div>
+        <p class="mb-1 mt-1">{{ item.message }}</p>
+        <small class="text-muted">
+          {{ item.campaignName || 'Envoi Express direct' }} · {{ (item.sentAt || item.createdAt) | date:'dd/MM/yyyy HH:mm' }}
           <ng-container *ngIf="item.providerResourceId">
-            - ID Orange {{ item.providerResourceId }}
-          </ng-container>
-          <ng-container *ngIf="item.deliveryStatus">
-            - DR {{ item.deliveryStatus }}
+            · Réf: {{ item.providerResourceId }}
           </ng-container>
         </small>
       </div>
       <div class="segment-box">
         <strong>{{ item.segmentCount }}</strong>
-        <span>segment(s)</span>
+        <span>crédit(s)</span>
       </div>
     </div>
 
-    <div class="empty-state" *ngIf="!loading && filteredHistory.length === 0">
-      Aucun historique SMS pour les filtres selectionnes.
+    <div class="empty-state text-center text-muted py-5" *ngIf="!loading() && filteredHistory().length === 0">
+      Aucun message enregistré pour ces critères.
     </div>
   </section>
 </div>

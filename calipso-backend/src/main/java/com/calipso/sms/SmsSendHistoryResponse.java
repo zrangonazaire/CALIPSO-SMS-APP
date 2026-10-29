@@ -1,5 +1,7 @@
 package com.calipso.sms;
 
+import com.calipso.campaign.CampaignChannel;
+
 import java.time.LocalDateTime;
 
 public record SmsSendHistoryResponse(
@@ -9,7 +11,9 @@ public record SmsSendHistoryResponse(
         Long campaignId,
         String campaignName,
         SmsSendSource source,
+        CampaignChannel channel,
         String phoneNumber,
+        String subject,
         String message,
         Integer segmentCount,
         String status,
@@ -29,7 +33,9 @@ public record SmsSendHistoryResponse(
                 history.getCampaign() == null ? null : history.getCampaign().getId(),
                 history.getCampaign() == null ? null : history.getCampaign().getName(),
                 history.getSource(),
+                history.getChannel() == null ? CampaignChannel.SMS : history.getChannel(),
                 history.getPhoneNumber(),
+                history.getSubject(),
                 history.getMessage(),
                 history.getSegmentCount(),
                 history.getStatus().name(),

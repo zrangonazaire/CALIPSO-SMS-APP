@@ -36,13 +36,23 @@ public class CompanyUser {
     @Column
     private String passwordHash;
 
+    @JsonIgnore
+    @Column
+    private String resetCode;
+
+    @JsonIgnore
+    @Column
+    private LocalDateTime resetCodeExpiresAt;
+
     private String phone;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private CompanyUserRole role = CompanyUserRole.OPERATOR;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean active = true;
 
     private LocalDateTime createdAt;

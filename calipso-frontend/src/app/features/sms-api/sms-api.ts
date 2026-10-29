@@ -1,65 +1,49 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { Company, OrangeSmsContract, SmsApiDashboard, SmsSendHistory } from '../../core/models/api.models';
-import { CompanyService } from '../../core/services/company';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { PeriodFilter } from '../../shared/period-filter/period-filter';
+import { DatePeriod } from '../../core/models/date-period';
+import { OrangeSmsContract, SmsApiDashboard, SmsSendHistory } from '../../core/models/api.models';
 import { SmsApiService } from '../../core/services/sms-api';
+import { WorkspaceService } from '../../core/services/workspace';
 
 @Component({
   selector: 'app-sms-api',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, PeriodFilter],
   templateUrl: './sms-api.html',
   styleUrl: './sms-api.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SmsApi implements OnInit {
-  private readonly companyService = inject(CompanyService);
+export class SmsApi {
+  readonly workspace = inject(WorkspaceService);
   private readonly smsApiService = inject(SmsApiService);
 
-  companies: Company[] = [];
-  selectedCompanyId = 0;
-  dashboard?: SmsApiDashboard;
-  loading = false;
-  error = '';
+  private readonly dashboardData = signal<SmsApiDashboard | undefined>(undefined);
+  readonly loading = signal(false);
+  readonly error = signal('');
+  readonly period = signal<DatePeriod>({});
+  private readonly refresh = signal(0);
 
-  ngOnInit(): void {
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        this.selectedCompanyId = companies[0]?.id || 0;
-        if (this.selectedCompanyId) {
-          this.loadDashboard();
-        }
-      },
-      error: () => this.error = 'Impossible de charger les entreprises.',
+  constructor() {
+    effect(onCleanup => {
+      const companyId = this.workspace.selectedCompanyId();
+      const period = this.period(); this.refresh();
+      this.dashboardData.set(undefined); this.error.set(''); this.loading.set(false);
+      if (!companyId) return;
+      this.loading.set(true);
+      const subscription = this.smsApiService.findDashboard(companyId, period).subscribe({
+        next: dashboard => { this.dashboardData.set(dashboard); this.loading.set(false); },
+        error: err => { this.loading.set(false); this.error.set(this.errorMessage(err)); },
+      });
+      onCleanup(() => subscription.unsubscribe());
     });
   }
 
-  loadDashboard(): void {
-    if (!this.selectedCompanyId) {
-      return;
-    }
-
-    this.loading = true;
-    this.error = '';
-    this.smsApiService.findDashboard(this.selectedCompanyId).subscribe({
-      next: (dashboard) => {
-        this.dashboard = dashboard;
-        this.syncCompanyBalance(dashboard);
-        this.loading = false;
-      },
-      error: (err) => {
-        this.loading = false;
-        this.error = this.errorMessage(err);
-      },
-    });
-  }
+  get dashboard(): SmsApiDashboard | undefined { return this.dashboardData(); }
+  get selectedCompanyId(): number { return this.workspace.selectedCompanyId(); }
+  loadDashboard(): void { this.refresh.update(value => value + 1); }
 
   get activeContracts(): OrangeSmsContract[] {
     return this.dashboard?.contracts.filter((contract) => contract.status === 'ACTIVE') || [];
-  }
-
-  get expiredContracts(): OrangeSmsContract[] {
-    return this.dashboard?.contracts.filter((contract) => contract.status !== 'ACTIVE') || [];
   }
 
   get latestMessages(): SmsSendHistory[] {
@@ -70,61 +54,42 @@ export class SmsApi implements OnInit {
     if (!this.dashboard) {
       return 0;
     }
-
     return Math.max(this.dashboard.acceptedMessages - this.dashboard.deliveredMessages, 0);
   }
 
   statusLabel(status?: string): string {
     const labels: Record<string, string> = {
-      ACTIVE: 'Actif',
-      EXPIRED: 'Expire',
-      SENT: 'Accepte Orange',
-      DELIVERED: 'Livre',
-      FAILED: 'Echec',
-      VALID: 'Valide',
+      ACTIVE: 'Connecté',
+      EXPIRED: 'Expiré',
+      SENT: 'Envoyé',
+      DELIVERED: 'Livré',
+      FAILED: 'Échec',
+      VALID: 'Prêt',
       INVALID: 'Invalide',
       PENDING: 'En attente',
     };
-
     return labels[status || ''] || status || '-';
   }
 
   statusClass(status?: string): string {
-    if (status === 'ACTIVE' || status === 'DELIVERED') {
+    if (status === 'ACTIVE' || status === 'DELIVERED' || status === 'SENT') {
       return 'badge-soft-success';
     }
-
     if (status === 'FAILED' || status === 'INVALID' || status === 'EXPIRED') {
       return 'badge-soft-danger';
     }
-
     return 'badge-soft-warning';
   }
 
   sourceLabel(source: string): string {
-    return source === 'CAMPAIGN' ? 'Campagne' : 'Envoi cible';
-  }
-
-  private syncCompanyBalance(dashboard: SmsApiDashboard): void {
-    this.companies = this.companies.map((company) => {
-      if (company.id !== dashboard.companyId) {
-        return company;
-      }
-
-      return {
-        ...company,
-        smsBalance: dashboard.remainingSmsBalance,
-        senderPhone: dashboard.senderPhone,
-      };
-    });
+    return source === 'CAMPAIGN' ? 'Campagne' : 'Envoi Express';
   }
 
   private errorMessage(err: unknown): string {
     if (typeof err === 'object' && err !== null && 'error' in err) {
       const body = (err as { error?: { detail?: string; message?: string; error?: string } }).error;
-      return body?.detail || body?.message || body?.error || 'Impossible de charger la supervision API SMS.';
+      return body?.detail || body?.message || body?.error || 'Impossible de charger l\'état des connecteurs.';
     }
-
-    return 'Impossible de charger la supervision API SMS.';
+    return 'Impossible de charger l\'état des connecteurs.';
   }
 }

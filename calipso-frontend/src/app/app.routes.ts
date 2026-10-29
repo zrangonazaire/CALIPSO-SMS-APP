@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 import { MainLayout } from './layout/main-layout/main-layout';
 import { Dashboard } from './features/dashboard/dashboard';
 import { CompanyList } from './features/companies/company-list/company-list';
-import { ImportProfileList } from './features/import-profiles/import-profile-list/import-profile-list';
 import { ExcelVariableList } from './features/excel-variables/excel-variable-list/excel-variable-list';
 import { SmsTemplateList } from './features/sms-templates/sms-template-list/sms-template-list';
 import { CampaignList } from './features/campaigns/campaign-list/campaign-list';
@@ -26,7 +25,13 @@ export const routes: Routes = [
       { path: 'dashboard', component: Dashboard },
       { path: 'sms-api', component: SmsApi },
       { path: 'companies', component: CompanyList },
-      { path: 'import-profiles', component: ImportProfileList },
+      {
+        path: 'import-profiles',
+        loadComponent: () =>
+          import('./features/import-profiles/import-profile-list/import-profile-list').then(
+            (m) => m.ImportProfileList,
+          ),
+      },
       { path: 'excel-variables', component: ExcelVariableList },
       { path: 'sms-templates', component: SmsTemplateList },
       { path: 'manual-sms', component: ManualSms },
@@ -34,7 +39,7 @@ export const routes: Routes = [
       { path: 'campaigns', component: CampaignList },
       { path: 'campaigns/create', component: CampaignCreate },
       { path: 'recipients', component: RecipientList },
-      { path: 'subscription', component: Subscription }
-    ]
-  }
+      { path: 'subscription', component: Subscription },
+    ],
+  },
 ];

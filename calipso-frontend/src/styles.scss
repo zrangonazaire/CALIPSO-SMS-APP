@@ -1,58 +1,226 @@
 :root {
-  --atlas-primary: #172554;
+  /* Palette SaaS Moderne & Épurée (Inspiration Brevo / Stripe) */
+  --calipso-bg: #f8fafc;
+  --calipso-surface: #ffffff;
+  --calipso-surface-alt: #f1f5f9;
+  --calipso-border: #e2e8f0;
+  --calipso-border-strong: #cbd5e1;
+
+  --calipso-text: #0f172a;
+  --calipso-text-secondary: #475569;
+  --calipso-text-muted: #64748b;
+
+  /* Brand Primary (Indigo / Royal Blue) */
+  --calipso-primary: #4f46e5;
+  --calipso-primary-hover: #4338ca;
+  --calipso-primary-soft: #eef2ff;
+  --calipso-secondary: #2563eb;
+
+  /* Identité visuelle par canal */
+  --channel-sms: #2563eb;
+  --channel-sms-bg: #eff6ff;
+  --channel-sms-border: #bfdbfe;
+
+  --channel-whatsapp: #059669;
+  --channel-whatsapp-accent: #10b981;
+  --channel-whatsapp-bg: #ecfdf5;
+  --channel-whatsapp-border: #a7f3d0;
+
+  --channel-email: #7c3aed;
+  --channel-email-bg: #f5f3ff;
+  --channel-email-border: #ddd6fe;
+
+  /* Legacy aliases for smooth compatibility */
+  --atlas-primary: #4f46e5;
   --atlas-secondary: #2563eb;
-  --atlas-bg: #f4f7fb;
+  --atlas-bg: #f8fafc;
   --atlas-card: #ffffff;
-  --atlas-text: #1f2937;
+  --atlas-text: #0f172a;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.07), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 20px 40px -12px rgba(79, 70, 229, 0.14);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--atlas-bg);
-  color: var(--atlas-text);
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--calipso-bg);
+  color: var(--calipso-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, .page-title {
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--calipso-text);
 }
 
 .page-title {
+  font-weight: 800;
+  font-size: 1.65rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
   font-weight: 700;
-  color: var(--atlas-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--calipso-primary);
+  background: var(--calipso-primary-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
 }
 
-.atlas-card {
-  background: var(--atlas-card);
+/* Surfaces & Cards */
+.atlas-card, .calipso-card {
+  background: var(--calipso-surface);
+  border: 1px solid var(--calipso-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Buttons */
+.btn-atlas, .btn-calipso {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  color: #ffffff;
   border: none;
-  border-radius: 18px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-}
-
-.btn-atlas {
-  background: var(--atlas-primary);
-  color: white;
-  border-radius: 10px;
+  border-radius: 11px;
+  padding: 0.6rem 1.2rem;
   font-weight: 600;
+  font-size: 0.92rem;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  transition: all 0.18s ease;
 }
 
-.btn-atlas:hover {
-  background: #0f172a;
-  color: white;
+.btn-atlas:hover, .btn-calipso:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.34);
 }
 
+.btn-atlas:disabled, .btn-calipso:disabled {
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  color: var(--calipso-text-secondary);
+  border: 1px solid var(--calipso-border);
+  border-radius: 11px;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
+}
+
+.btn-ghost:hover {
+  background: var(--calipso-surface-alt);
+  color: var(--calipso-text);
+  border-color: var(--calipso-border-strong);
+}
+
+/* Form Controls */
+.form-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--calipso-text-secondary);
+  margin-bottom: 6px;
+}
+
+.form-control, .form-select {
+  border-radius: 11px;
+  border: 1px solid var(--calipso-border);
+  padding: 0.62rem 0.9rem;
+  font-size: 0.93rem;
+  color: var(--calipso-text);
+  background-color: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--calipso-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* Status & Channel Badges */
 .badge-soft-success {
   background: #dcfce7;
-  color: #166534;
+  color: #15803d;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
 }
 
 .badge-soft-danger {
   background: #fee2e2;
-  color: #991b1b;
+  color: #b91c1c;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
 }
 
 .badge-soft-warning {
   background: #fef3c7;
-  color: #92400e;
+  color: #b45309;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
 }
 
 .badge-soft-primary {
-  background: #dbeafe;
-  color: #1e40af;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.channel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.channel-pill.sms {
+  background: var(--channel-sms-bg);
+  color: var(--channel-sms);
+  border: 1px solid var(--channel-sms-border);
+}
+
+.channel-pill.whatsapp {
+  background: var(--channel-whatsapp-bg);
+  color: var(--channel-whatsapp);
+  border: 1px solid var(--channel-whatsapp-border);
+}
+
+.channel-pill.email {
+  background: var(--channel-email-bg);
+  color: var(--channel-email);
+  border: 1px solid var(--channel-email-border);
 }

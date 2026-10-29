@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Campaign, Company, Recipient } from '../../../core/models/api.models';
+import { Campaign, CampaignChannel, Recipient } from '../../../core/models/api.models';
 import { CampaignService } from '../../../core/services/campaign';
-import { CompanyService } from '../../../core/services/company';
 import { RecipientService } from '../../../core/services/recipient';
+import { WorkspaceService } from '../../../core/services/workspace';
 
 @Component({
   selector: 'app-campaign-list',
@@ -13,49 +13,60 @@ import { RecipientService } from '../../../core/services/recipient';
   templateUrl: './campaign-list.html',
   styleUrl: './campaign-list.scss',
 })
-export class CampaignList implements OnInit {
-  private readonly companyService = inject(CompanyService);
+export class CampaignList {
+  readonly workspace = inject(WorkspaceService);
   private readonly campaignService = inject(CampaignService);
   private readonly recipientService = inject(RecipientService);
 
-  companies: Company[] = [];
   campaigns: Campaign[] = [];
   recipients: Recipient[] = [];
   selectedCampaign?: Campaign;
-  selectedCompanyId = 0;
+  channelFilter: 'ALL' | CampaignChannel = 'ALL';
+  searchQuery = '';
   error = '';
   success = '';
   previewLoading = false;
+  sending = false;
 
-  ngOnInit(): void {
-    this.companyService.findAll().subscribe({
-      next: (companies) => {
-        this.companies = companies;
-        this.selectedCompanyId = companies[0]?.id || 0;
-        if (this.selectedCompanyId) {
-          this.loadCampaigns();
-        }
-      },
-      error: () => this.error = 'Impossible de charger les entreprises.',
+  constructor() {
+    effect(() => {
+      const companyId = this.workspace.selectedCompanyId();
+      if (companyId) {
+        this.loadCampaigns(companyId);
+      }
     });
   }
 
-  loadCampaigns(): void {
+  get filteredCampaigns(): Campaign[] {
+    return this.campaigns.filter((c) => {
+      const ch = c.channel || 'SMS';
+      const matchesChannel = this.channelFilter === 'ALL' || ch === this.channelFilter;
+      const matchesSearch =
+        !this.searchQuery.trim() ||
+        c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        (c.description || '').toLowerCase().includes(this.searchQuery.toLowerCase());
+      return matchesChannel && matchesSearch;
+    });
+  }
+
+  loadCampaigns(companyId = this.workspace.selectedCompanyId()): void {
+    if (!companyId) return;
     this.error = '';
-    this.success = '';
-    this.campaignService.findByCompany(this.selectedCompanyId).subscribe({
+    this.campaignService.findByCompany(companyId).subscribe({
       next: (campaigns) => {
         this.campaigns = campaigns;
         const selectedStillExists = campaigns.find((campaign) => campaign.id === this.selectedCampaign?.id);
         this.selectedCampaign = selectedStillExists || campaigns[0];
-        this.selectedCampaign?.id ? this.loadRecipients(this.selectedCampaign) : this.recipients = [];
+        this.selectedCampaign?.id ? this.loadRecipients(this.selectedCampaign) : (this.recipients = []);
       },
-      error: () => this.error = 'Impossible de charger les campagnes.',
+      error: () => (this.error = 'Impossible de charger vos campagnes.'),
     });
   }
 
   selectCampaign(campaign: Campaign): void {
     this.selectedCampaign = campaign;
+    this.success = '';
+    this.error = '';
     this.loadRecipients(campaign);
   }
 
@@ -73,7 +84,7 @@ export class CampaignList implements OnInit {
       },
       error: () => {
         this.previewLoading = false;
-        this.error = 'Impossible de charger l apercu des destinataires.';
+        this.error = 'Impossible de charger l\'aperçu des destinataires.';
       },
     });
   }
@@ -85,13 +96,15 @@ export class CampaignList implements OnInit {
       return;
     }
 
+    this.error = '';
+    this.success = '';
     this.campaignService.importExcel(campaign.id, file).subscribe({
       next: (updatedCampaign) => {
-        this.success = 'Fichier importe avec succes.';
+        this.success = `Fichier importé avec succès : ${updatedCampaign.totalValid || 0} contact(s) prêts.`;
         this.selectedCampaign = updatedCampaign;
         this.loadCampaigns();
       },
-      error: (err) => this.error = err.error?.message || 'Import Excel impossible.',
+      error: (err) => (this.error = err.error?.message || 'Import du fichier impossible.'),
     });
 
     input.value = '';
@@ -102,13 +115,21 @@ export class CampaignList implements OnInit {
       return;
     }
 
+    this.sending = true;
+    this.error = '';
+    this.success = '';
     this.campaignService.send(campaign.id).subscribe({
       next: (updatedCampaign) => {
-        this.success = 'Campagne envoyee avec succes.';
+        this.sending = false;
+        this.success = `Campagne diffusée avec succès (${updatedCampaign.totalSent || 0} messages envoyés) !`;
         this.selectedCampaign = updatedCampaign;
+        this.workspace.refreshCompanies(this.workspace.selectedCompanyId());
         this.loadCampaigns();
       },
-      error: (err) => this.error = err.error?.message || 'Envoi impossible.',
+      error: (err) => {
+        this.sending = false;
+        this.error = err.error?.message || 'Envoi impossible.';
+      },
     });
   }
 
@@ -117,51 +138,51 @@ export class CampaignList implements OnInit {
   }
 
   get validRecipients(): number {
-    return this.recipients.filter((recipient) => recipient.status === 'VALID' || recipient.status === 'SENT').length;
+    return this.recipients.filter((r) => r.status === 'VALID' || r.status === 'SENT').length;
   }
 
   get invalidRecipients(): number {
-    return this.recipients.filter((recipient) => recipient.status === 'INVALID').length;
+    return this.recipients.filter((r) => r.status === 'INVALID').length;
   }
 
   get totalSegments(): number {
-    return this.selectedCampaign?.totalSegments || this.recipients.reduce((total, recipient) => total + (recipient.segmentCount || 0), 0);
+    return (
+      this.selectedCampaign?.totalSegments ||
+      this.recipients.reduce((total, r) => total + (r.segmentCount || 0), 0)
+    );
   }
 
   get previewColumns(): string[] {
-    const keys = this.recipients.flatMap((recipient) => Object.keys(recipient.rawData || {}));
+    const keys = this.recipients.flatMap((r) => Object.keys(r.rawData || {}));
     return [...new Set(keys)].slice(0, 5);
   }
 
   statusLabel(status?: string): string {
     const labels: Record<string, string> = {
       DRAFT: 'Brouillon',
-      IMPORTED: 'Importee',
+      IMPORTED: 'Prête à envoyer',
       SENDING: 'Envoi en cours',
-      COMPLETED: 'Terminee',
-      FAILED: 'Echec',
-      VALID: 'Valide',
+      COMPLETED: 'Envoyée',
+      FAILED: 'Échec',
+      VALID: 'Prêt',
       INVALID: 'Invalide',
-      SENT: 'Accepte Orange',
+      SENT: 'Envoyé',
+      DELIVERED: 'Livré',
       PENDING: 'En attente',
     };
-
     return status ? labels[status] || status : '-';
   }
 
   statusClass(status?: string): string {
-    if (status === 'COMPLETED' || status === 'VALID') {
+    if (status === 'COMPLETED' || status === 'VALID' || status === 'SENT' || status === 'DELIVERED') {
       return 'badge-soft-success';
     }
-
     if (status === 'INVALID' || status === 'FAILED') {
       return 'badge-soft-danger';
     }
-
     if (status === 'IMPORTED') {
       return 'badge-soft-primary';
     }
-
     return 'badge-soft-warning';
   }
 }

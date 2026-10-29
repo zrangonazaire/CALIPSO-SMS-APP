@@ -1,5 +1,7 @@
 package com.calipso.compagny;
 
+import com.calipso.auth.CompanyAccess;
+
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,11 +17,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CompanyController {
 
+    private final CompanyAccess access;
+
     private final CompanyRepository companyRepository;
     private final SubscriptionService subscriptionService;
 
     @PostMapping
     public Company create(@RequestBody @Valid CreateCompanyRequest request) {
+        access.requirePlatformAdmin();
         Company company = Company.builder()
                 .name(request.name())
                 .email(request.email())
@@ -28,7 +33,7 @@ public class CompanyController {
                 .address(request.address())
                 .contactName(request.contactName())
                 .businessType(request.businessType())
-                .smsBalance(0)
+                .smsBalance(50)
                 .active(true)
                 .build();
 
@@ -37,11 +42,13 @@ public class CompanyController {
 
     @GetMapping
     public List<Company> findAll() {
-        return companyRepository.findAll();
+        var user = access.currentUser();
+        return access.isPlatformAdmin(user) ? companyRepository.findAll() : List.of(user.getCompany());
     }
 
     @GetMapping("/{id}")
     public Company findById(@PathVariable Long id) {
+        access.requireCompany(id);
         return companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
     }
@@ -51,6 +58,7 @@ public class CompanyController {
             @PathVariable Long id,
             @RequestBody @Valid CreateCompanyRequest request
     ) {
+        access.requireTeamManager(id);
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Entreprise introuvable"));
 
@@ -70,6 +78,7 @@ public class CompanyController {
             @PathVariable Long id,
             @RequestBody @Valid RechargeWalletRequest request
     ) {
-        return subscriptionService.rechargeWallet(id, request.smsUnits());
+        access.requireCompany(id);
+        return subscriptionService.rechargeWallet(id, request);
     }
 }

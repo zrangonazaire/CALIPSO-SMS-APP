@@ -1,13 +1,17 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 
-import { ImportProfile } from './import-profile';
+import { ImportProfileService } from './import-profile';
 
-describe('ImportProfile', () => {
-  let service: ImportProfile;
+describe('ImportProfileService', () => {
+  let service: ImportProfileService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(ImportProfile);
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(ImportProfileService);
   });
 
   it('should be created', () => {

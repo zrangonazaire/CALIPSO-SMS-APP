@@ -10,9 +10,10 @@ public record AuthUserResponse(
         String fullName,
         String username,
         String email,
-        CompanyUserRole role
+        CompanyUserRole role,
+        boolean platformAdmin
 ) {
-    public static AuthUserResponse from(CompanyUser user) {
+    public static AuthUserResponse from(CompanyUser user, boolean platformAdmin) {
         return new AuthUserResponse(
                 user.getId(),
                 user.getCompany().getId(),
@@ -20,7 +21,8 @@ public record AuthUserResponse(
                 user.getFullName(),
                 user.getUsername(),
                 user.getEmail(),
-                user.getRole()
+                user.getRole(),
+                platformAdmin
         );
     }
 }

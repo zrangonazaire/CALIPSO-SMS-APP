@@ -1,56 +1,83 @@
-<div class="container-fluid">
-  <div class="mb-4">
-    <h2 class="page-title mb-1">Modeles SMS</h2>
-    <p class="text-muted mb-0">Creez les messages avec variables Excel.</p>
+<div class="templates-page">
+  <header class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div>
+      <span class="eyebrow"><i class="bi bi-collection-fill"></i> Inspiration & Gain de temps</span>
+      <h2 class="page-title mb-1">Bibliothèque de modèles</h2>
+      <p class="text-muted mb-0">
+        Choisissez un modèle prêt à l'emploi et lancez votre campagne en 1 clic avec vos variables personnalisées.
+      </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a routerLink="/import-profiles" class="btn-ghost">
+        <i class="bi bi-file-earmark-spreadsheet"></i>
+        Configurer les en-têtes SMS
+      </a>
+      <a routerLink="/campaigns/create" class="btn-atlas">
+        <i class="bi bi-magic"></i>
+        Nouvelle campagne
+      </a>
+    </div>
+  </header>
+
+  <div class="alert alert-success rounded-3" *ngIf="success">{{ success }}</div>
+
+  <div class="filter-strip">
+    <button type="button" [class.active]="channelFilter === 'ALL'" (click)="channelFilter = 'ALL'">Tous les canaux</button>
+    <button type="button" [class.active]="channelFilter === 'SMS'" (click)="channelFilter = 'SMS'">
+      <i class="bi bi-chat-dots-fill text-primary"></i> SMS
+    </button>
+    <button type="button" [class.active]="channelFilter === 'WHATSAPP'" (click)="channelFilter = 'WHATSAPP'">
+      <i class="bi bi-whatsapp text-success"></i> WhatsApp
+    </button>
+    <button type="button" [class.active]="channelFilter === 'EMAIL'" (click)="channelFilter = 'EMAIL'">
+      <i class="bi bi-envelope-fill" style="color: #7c3aed"></i> Email
+    </button>
   </div>
 
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
-
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">
-      <label class="form-label">Entreprise</label>
-      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadProfiles()">
-        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
-      </select>
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">Profil</label>
-      <select class="form-select" [(ngModel)]="profileId" (ngModelChange)="loadTemplates()">
-        <option *ngFor="let profile of profiles" [ngValue]="profile.id">{{ profile.name }}</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="row g-4">
-    <div class="col-lg-4">
-      <div class="card atlas-card">
-        <div class="card-body">
-          <h5 class="fw-bold mb-3">Nouveau modele</h5>
-          <label class="form-label">Nom</label>
-          <input class="form-control mb-3" [(ngModel)]="form.name">
-          <label class="form-label">Contenu</label>
-          <textarea class="form-control mb-4" rows="7" [(ngModel)]="form.content" [placeholder]="'Bonjour {{NOM_CLIENT}}...'"></textarea>
-          <button class="btn btn-atlas w-100" (click)="createTemplate()" [disabled]="!profileId">Creer</button>
+  <div class="templates-layout">
+    <section class="templates-grid">
+      <article class="tpl-card calipso-card" *ngFor="let tpl of filteredCurated">
+        <div class="tpl-top">
+          <span class="channel-pill" [ngClass]="tpl.channel.toLowerCase()">{{ tpl.channel }}</span>
+          <span class="tpl-cat">{{ tpl.category }}</span>
         </div>
-      </div>
-    </div>
-    <div class="col-lg-8">
-      <div class="card atlas-card">
-        <div class="card-body">
-          <h5 class="fw-bold mb-3">Modeles</h5>
-          <table class="table align-middle">
-            <thead><tr><th>Nom</th><th>Contenu</th><th>Statut</th></tr></thead>
-            <tbody>
-              <tr *ngFor="let template of templates">
-                <td class="fw-semibold">{{ template.name }}</td>
-                <td>{{ template.content }}</td>
-                <td><span class="badge badge-soft-success">{{ template.active ? 'Actif' : 'Inactif' }}</span></td>
-              </tr>
-              <tr *ngIf="templates.length === 0"><td colspan="3" class="text-center text-muted py-4">Aucun modele.</td></tr>
-            </tbody>
-          </table>
+        <h5>{{ tpl.name }}</h5>
+        <p class="tpl-body">{{ tpl.content }}</p>
+        <div class="tpl-footer">
+          <a
+            [routerLink]="['/campaigns/create']"
+            [queryParams]="{ channel: tpl.channel, templateName: tpl.name, templateContent: tpl.content }"
+            class="btn-ghost btn-sm w-100 justify-content-center">
+            <i class="bi bi-send-plus text-primary"></i>
+            Utiliser ce modèle
+          </a>
         </div>
-      </div>
-    </div>
+      </article>
+    </section>
+
+    <aside class="calipso-card p-4">
+      <h5 class="fw-bold mb-1">Créer un modèle personnalisé</h5>
+      <p class="text-muted small mb-3">
+        Utilisez la syntaxe <code>{{ '{{PRENOM}}' }}</code> ou <code>{{ '{{MONTANT}}' }}</code> pour insérer des champs dynamiques.
+      </p>
+
+      <label class="form-label">Titre du modèle</label>
+      <input class="form-control mb-3" [(ngModel)]="form.name" placeholder="Ex: Relance client VIP">
+
+      <label class="form-label">Contenu du message</label>
+      <textarea
+        class="form-control mb-3"
+        rows="6"
+        [(ngModel)]="form.content"
+        [placeholder]="'Bonjour {{PRENOM}}, votre commande est disponible...'"></textarea>
+
+      <button
+        class="btn-atlas w-100"
+        (click)="createTemplate()"
+        [disabled]="!form.name.trim() || !form.content.trim()">
+        <i class="bi bi-plus-circle"></i>
+        Enregistrer dans ma bibliothèque
+      </button>
+    </aside>
   </div>
 </div>

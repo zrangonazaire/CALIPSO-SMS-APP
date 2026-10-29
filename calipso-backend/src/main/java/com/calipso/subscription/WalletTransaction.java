@@ -37,6 +37,22 @@ public class WalletTransaction {
 
     private Integer amount;
 
+    private Integer balanceAfter;
+
+    private String reference;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
+
+    private String payerPhone;
+
+    private String providerName;
+
+    private String checkoutUrl;
+
     @Column(nullable = false)
     private String reason;
 
@@ -46,6 +62,12 @@ public class WalletTransaction {
     public void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (paymentStatus == null) {
+            paymentStatus = PaymentStatus.COMPLETED;
+        }
+        if (paymentMethod == null) {
+            paymentMethod = type == TransactionType.CREDIT ? PaymentMethod.WAVE_CI : PaymentMethod.SYSTEM;
         }
     }
 }

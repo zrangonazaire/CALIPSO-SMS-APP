@@ -1,0 +1,11 @@
+<section class="period-panel" [attr.aria-labelledby]="idPrefix() + '-title'">
+  <div class="period-heading"><div><h3 [id]="idPrefix() + '-title'">Période des statistiques</h3><p>{{ basis() }}</p></div><span class="period-summary" role="status">{{ summary() }}</span></div>
+  <form [formGroup]="form" (ngSubmit)="applyCustom()" class="period-fields">
+    <div><label [for]="idPrefix() + '-preset'">Période</label><select class="form-select" [id]="idPrefix() + '-preset'" formControlName="preset"><option value="ALL">Toute la période</option><option value="TODAY">Aujourd’hui</option><option value="YESTERDAY">Hier</option><option value="LAST_7_DAYS">7 derniers jours</option><option value="LAST_30_DAYS">30 derniers jours</option><option value="THIS_MONTH">Ce mois-ci</option><option value="LAST_MONTH">Mois précédent</option><option value="CUSTOM">Personnalisée</option></select></div>
+    <div><label [for]="idPrefix() + '-start'">Du</label><input type="date" class="form-control" [id]="idPrefix() + '-start'" formControlName="startDate" [attr.aria-describedby]="error() ? idPrefix() + '-error' : null"></div>
+    <div><label [for]="idPrefix() + '-end'">Au (inclus)</label><input type="date" class="form-control" [id]="idPrefix() + '-end'" formControlName="endDate" [attr.aria-describedby]="error() ? idPrefix() + '-error' : null"></div>
+    <div class="period-actions"><button type="submit" class="btn-atlas">Appliquer</button><button type="button" class="btn-ghost" (click)="reset()">Réinitialiser</button></div>
+  </form>
+  @if (pending()) { <p class="pending" role="status">Cliquez sur « Appliquer » pour actualiser les statistiques.</p> }
+  @if (error()) { <p class="error" [id]="idPrefix() + '-error'" role="alert">{{ error() }}</p> }
+</section>

@@ -1,349 +1,441 @@
-<div class="campaign-profile-page">
-  <header class="workspace-header">
+<div class="header-models-page">
+  <header class="page-heading">
     <div>
-      <span class="eyebrow">Profil de Campagne</span>
-      <h2 class="page-title mb-1">Atelier de preparation SMS</h2>
-      <p class="text-muted mb-0">
-        Centralisez le format Excel, les variables d'entete et les contenus SMS avant le lancement des campagnes.
-      </p>
+      <span class="eyebrow">Configuration · {{ workspace.activeCompany()?.name }}</span>
+      <h2>En-têtes Excel et variables SMS</h2>
+      <p>Enregistrez une structure une fois, puis réutilisez-la dans vos campagnes.</p>
     </div>
-
-    <div class="readiness-panel">
-      <span class="readiness-label">Pret pour envoi</span>
-      <strong>{{ readinessScore }}%</strong>
-      <div class="progress">
-        <div class="progress-bar" [style.width.%]="readinessScore"></div>
-      </div>
-    </div>
+    <button
+      type="button"
+      class="btn btn-atlas"
+      (click)="newModel()"
+      [disabled]="saving() || analyzing()"
+    >
+      Nouveau modèle
+    </button>
   </header>
-
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
-  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
-
-  <section class="control-strip">
-    <div>
-      <label class="form-label">Entreprise</label>
-      <select class="form-select" [(ngModel)]="selectedCompanyId" (ngModelChange)="loadProfiles()">
-        <option *ngFor="let company of companies" [ngValue]="company.id">{{ company.name }}</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="form-label">Profil actif</label>
-      <select class="form-select" [(ngModel)]="selectedProfileId" (ngModelChange)="loadProfileWorkspace()">
-        <option [ngValue]="0">Aucun profil selectionne</option>
-        <option *ngFor="let profile of profiles" [ngValue]="profile.id">{{ profile.name }}</option>
-      </select>
-    </div>
-
-    <div class="profile-summary">
-      <span>{{ variables.length }} entete(s)</span>
-      <span>{{ phoneVariables.length }} destinataire(s) SMS</span>
-      <span>{{ templates.length }} contenu(s)</span>
-    </div>
-  </section>
-
-  <nav class="builder-tabs" aria-label="Etapes profil de campagne">
-    <button type="button" [class.active]="activePanel === 'profile'" (click)="activePanel = 'profile'">
-      <i class="bi bi-folder-plus"></i>
-      Profil
-    </button>
-    <button type="button" [class.active]="activePanel === 'variables'" (click)="activePanel = 'variables'">
-      <i class="bi bi-braces"></i>
-      Entetes Excel
-    </button>
-    <button type="button" [class.active]="activePanel === 'message'" (click)="activePanel = 'message'">
-      <i class="bi bi-chat-square-text"></i>
-      SMS
-    </button>
-    <button type="button" [class.active]="activePanel === 'review'" (click)="activePanel = 'review'">
-      <i class="bi bi-check2-circle"></i>
-      Controle
-    </button>
-  </nav>
-
-  <section class="workspace-grid" *ngIf="activePanel === 'profile'">
-    <article class="atlas-card surface-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Nouveau profil</h5>
-          <p>Un profil regroupe les entetes Excel, le numero destinataire et les messages reutilisables.</p>
-        </div>
-        <i class="bi bi-diagram-3"></i>
-      </div>
-
-      <label class="form-label">Nom du profil</label>
-      <input class="form-control" [(ngModel)]="profileForm.name" placeholder="Ex: Relance scolarite mai">
-
-      <label class="form-label mt-3">Description operationnelle</label>
-      <textarea
-        class="form-control"
-        rows="4"
-        [(ngModel)]="profileForm.description"
-        placeholder="Canal, cible, contexte, regles d'import..."
-      ></textarea>
-
-      <button class="btn btn-atlas mt-4" (click)="createProfile()" [disabled]="!selectedCompanyId || !profileForm.name.trim()">
-        <i class="bi bi-plus-circle"></i>
-        Creer le profil
-      </button>
-    </article>
-
-    <article class="atlas-card surface-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Profils disponibles</h5>
-          <p>Selectionnez un profil pour enrichir sa structure d'envoi.</p>
-        </div>
-        <span class="metric">{{ profiles.length }}</span>
-      </div>
-
-      <div class="profile-list">
+  @if (error()) {
+    <div class="alert alert-danger" role="alert">{{ error() }}</div>
+  }
+  @if (success()) {
+    <div class="alert alert-success" role="status">{{ success() }}</div>
+  }
+  <div class="models-layout">
+    <aside class="atlas-card model-library" aria-label="Modèles enregistrés">
+      <h3>
+        Mes modèles <span>{{ profiles().length }}</span>
+      </h3>
+      @for (profile of profiles(); track profile.id) {
         <button
           type="button"
-          class="profile-row"
-          *ngFor="let profile of profiles"
-          [class.active]="profile.id === selectedProfileId"
-          (click)="selectedProfileId = profile.id || 0; loadProfileWorkspace()"
+          class="model-item"
+          [class.active]="selectedId() === profile.id"
+          [attr.aria-pressed]="selectedId() === profile.id"
+          (click)="selectModel(profile)"
+          [disabled]="saving() || analyzing()"
         >
-          <span>
-            <strong>{{ profile.name }}</strong>
-            <small>{{ profile.description || 'Aucune description' }}</small>
-          </span>
-          <span class="badge" [ngClass]="profile.active ? 'badge-soft-success' : 'badge-soft-warning'">
-            {{ profile.active ? 'Actif' : 'Inactif' }}
-          </span>
+          <strong>{{ profile.name }}</strong
+          ><small>{{ profile.description || 'Structure réutilisable' }}</small>
         </button>
-
-        <div class="empty-state" *ngIf="profiles.length === 0">
-          Aucun profil de campagne pour cette entreprise.
-        </div>
-      </div>
-    </article>
-  </section>
-
-  <section class="workspace-grid" *ngIf="activePanel === 'variables'">
-    <article class="atlas-card surface-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Variables d'entete Excel</h5>
-          <p>Declarez chaque colonne attendue dans le fichier importe.</p>
-        </div>
-        <i class="bi bi-table"></i>
-      </div>
-
-      <div class="phone-rule">
-        <i class="bi bi-telephone-fill"></i>
-        <div>
-          <strong>La variable destinataire SMS est obligatoire.</strong>
-          <span>
-            Cochez "Numero destinataire SMS" sur une seule colonne de type PHONE. Cette colonne sera utilisee pour lire les numeros dans Excel.
-          </span>
-        </div>
-      </div>
-
-      <div class="preset-grid">
-        <button type="button" *ngFor="let preset of variablePresets" (click)="usePreset(preset)">
-          {{ preset.label }}
-        </button>
-      </div>
-
-      <div class="form-grid mt-3">
-        <div>
-          <label class="form-label">Code variable</label>
-          <input class="form-control" [(ngModel)]="variableForm.code" placeholder="Ex: prenom">
-        </div>
-        <div>
-          <label class="form-label">Libelle</label>
-          <input class="form-control" [(ngModel)]="variableForm.label" placeholder="Ex: Prenom client">
-        </div>
-        <div>
-          <label class="form-label">Type</label>
-          <select class="form-select" [(ngModel)]="variableForm.dataType">
-            <option *ngFor="let type of dataTypes" [ngValue]="type">{{ type }}</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="option-row">
-        <label>
-          <input type="checkbox" [(ngModel)]="variableForm.required" [disabled]="variableForm.phone">
-          Obligatoire
-        </label>
-        <label>
-          <input type="checkbox" [(ngModel)]="variableForm.phone" (ngModelChange)="onPhoneVariableChange()">
-          Numero destinataire SMS
-        </label>
-      </div>
-
-      <button
-        class="btn btn-atlas mt-4"
-        (click)="createVariable()"
-        [disabled]="!selectedProfileId || !variableForm.code.trim() || !variableForm.label.trim()"
-      >
-        <i class="bi bi-plus-circle"></i>
-        Ajouter l'entete
-      </button>
-    </article>
-
-    <article class="atlas-card surface-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Dictionnaire du profil</h5>
-          <p>Ces variables pourront etre inserees dans le SMS avec la syntaxe {{ '{{code}}' }}.</p>
-        </div>
-        <span class="metric">{{ variables.length }}</span>
-      </div>
-
-      <div class="variable-list">
-        <div class="variable-row" *ngFor="let variable of variables" [class.phone-variable]="variable.phone">
-          <div>
-            <strong>{{ variable.code }}</strong>
-            <small>{{ variable.label }}</small>
-          </div>
-          <div class="variable-badges">
-            <span class="badge badge-soft-primary">{{ variable.dataType }}</span>
-            <span class="badge badge-soft-success" *ngIf="variable.required">Obligatoire</span>
-            <span class="badge badge-soft-danger" *ngIf="variable.phone">SMS</span>
-            <button
-              type="button"
-              class="btn btn-sm btn-outline-danger icon-action"
-              title="Supprimer la variable"
-              aria-label="Supprimer la variable"
-              (click)="deleteVariable(variable)"
-            >
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="empty-state" *ngIf="variables.length === 0">
-          Aucun entete declare. Commencez par le numero de telephone.
-        </div>
-      </div>
-    </article>
-  </section>
-
-  <section class="message-layout" *ngIf="activePanel === 'message'">
-    <article class="atlas-card surface-panel composer-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Contenu SMS</h5>
-          <p>Composez un message personnalise avec les variables du profil.</p>
-        </div>
-        <i class="bi bi-envelope-paper"></i>
-      </div>
-
-      <label class="form-label">Nom du modele</label>
-      <input class="form-control" [(ngModel)]="templateForm.name" placeholder="Ex: Relance paiement">
-
-      <label class="form-label mt-3">Message</label>
-      <textarea
-        class="form-control sms-editor"
-        rows="9"
-        [(ngModel)]="templateForm.content"
-        [placeholder]="'Bonjour {{PRENOM}}, votre message...'"
-      ></textarea>
-
-      <div class="sms-metrics">
-        <span>{{ smsLength }} caractere(s)</span>
-        <span>{{ smsSegments }} segment(s)</span>
-        <span [class.text-danger]="unknownTemplateVariables.length > 0">
-          {{ unknownTemplateVariables.length }} variable(s) inconnue(s)
-        </span>
-      </div>
-
-      <button
-        class="btn btn-atlas mt-3"
-        (click)="createTemplate()"
-        [disabled]="!selectedProfileId || !templateForm.name.trim() || !templateForm.content.trim()"
-      >
-        <i class="bi bi-save"></i>
-        Enregistrer le contenu SMS
-      </button>
-    </article>
-
-    <aside class="side-stack">
-      <article class="atlas-card surface-panel">
-        <div class="panel-heading compact">
-          <div>
-            <h5>Insertion rapide</h5>
-            <p>Cliquez pour ajouter une variable au message.</p>
-          </div>
-        </div>
-
-        <div class="token-list">
-          <button type="button" *ngFor="let variable of variables" (click)="insertVariable(variable)">
-            {{ '{{' + variable.code + '}}' }}
-          </button>
-          <div class="empty-state" *ngIf="variables.length === 0">Aucune variable disponible.</div>
-        </div>
-      </article>
-
-      <article class="atlas-card surface-panel">
-        <div class="panel-heading compact">
-          <div>
-            <h5>Apercu personnalise</h5>
-            <p>Simulation avec des valeurs exemples.</p>
-          </div>
-        </div>
-        <div class="phone-preview">
-          {{ previewMessage || 'Votre SMS apparaitra ici.' }}
-        </div>
-      </article>
+      } @empty {
+        <p>Aucun modèle enregistré. Importez un fichier ou ajoutez vos colonnes.</p>
+      }
     </aside>
-  </section>
-
-  <section class="workspace-grid" *ngIf="activePanel === 'review'">
-    <article class="atlas-card surface-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Controle avant campagne</h5>
-          <p>Validez les points critiques avant l'import des destinataires.</p>
+    <div class="editor-stack">
+      <section class="atlas-card model-editor" aria-labelledby="editor-title">
+        <div class="editor-heading">
+          <h3 id="editor-title">{{ selectedId() ? 'Modifier le modèle' : 'Créer un modèle' }}</h3>
+          @if (selectedId()) {
+            <div class="actions">
+              <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                (click)="download()"
+                [disabled]="saving() || form.dirty || loading()"
+              >
+                Télécharger Excel vide</button
+              ><button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                (click)="duplicate()"
+                [disabled]="saving() || form.dirty || loading()"
+              >
+                Dupliquer</button
+              ><button
+                type="button"
+                class="btn btn-outline-danger btn-sm"
+                (click)="archivePending.set(true)"
+                [disabled]="saving()"
+              >
+                Archiver
+              </button>
+            </div>
+          }
         </div>
-        <span class="metric">{{ readinessScore }}%</span>
-      </div>
-
-      <div class="check-list">
-        <div [class.done]="selectedProfileId">
-          <i class="bi" [ngClass]="selectedProfileId ? 'bi-check-circle-fill' : 'bi-circle'"></i>
-          Profil selectionne
-        </div>
-        <div [class.done]="variables.length > 0">
-          <i class="bi" [ngClass]="variables.length > 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
-          Variables d'entete declarees
-        </div>
-        <div [class.done]="phoneVariables.length > 0">
-          <i class="bi" [ngClass]="phoneVariables.length > 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
-          Colonne telephone marquee comme destinataire SMS
-        </div>
-        <div [class.done]="templates.length > 0">
-          <i class="bi" [ngClass]="templates.length > 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
-          Au moins un contenu SMS enregistre
-        </div>
-        <div [class.done]="unknownTemplateVariables.length === 0">
-          <i class="bi" [ngClass]="unknownTemplateVariables.length === 0 ? 'bi-check-circle-fill' : 'bi-circle'"></i>
-          Toutes les variables du message existent dans les entetes
-        </div>
-      </div>
-    </article>
-
-    <article class="atlas-card surface-panel">
-      <div class="panel-heading">
-        <div>
-          <h5>Contenus disponibles</h5>
-          <p>Reprenez un contenu existant pour l'ameliorer ou le dupliquer.</p>
-        </div>
-        <span class="metric">{{ templates.length }}</span>
-      </div>
-
-      <div class="template-list">
-        <button type="button" *ngFor="let template of templates" (click)="editTemplate(template)">
-          <strong>{{ template.name }}</strong>
-          <small>{{ template.content }}</small>
-        </button>
-        <div class="empty-state" *ngIf="templates.length === 0">Aucun contenu SMS enregistre.</div>
-      </div>
-    </article>
-  </section>
+        @if (archivePending()) {
+          <div class="alert alert-warning" role="alert">
+            Archiver ce modèle ? Il ne sera plus proposé pour les nouvelles campagnes.
+            <div class="actions mt-2">
+              <button
+                type="button"
+                class="btn btn-danger btn-sm"
+                (click)="archive()"
+                [disabled]="saving()"
+              >
+                Confirmer l’archivage</button
+              ><button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                (click)="archivePending.set(false)"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        }
+        <form [formGroup]="form" (ngSubmit)="saveModel()">
+          <fieldset [disabled]="saving() || loading() || analyzing()">
+            <div class="details-grid">
+              <div>
+                <label for="model-name">Nom du modèle</label
+                ><input
+                  id="model-name"
+                  class="form-control"
+                  formControlName="name"
+                  placeholder="Ex. Relance scolarité"
+                  required
+                />
+              </div>
+              <div>
+                <label for="model-description">Description</label
+                ><input
+                  id="model-description"
+                  class="form-control"
+                  formControlName="description"
+                  placeholder="Usage de ce fichier"
+                />
+              </div>
+            </div>
+            <div class="creation-options">
+              <div>
+                <h4>À partir d’un fichier</h4>
+                <p>
+                  Récupérez les en-têtes d’un fichier Excel ou CSV. Seule la structure est
+                  enregistrée.
+                </p>
+                <label for="header-file">Fichier de référence</label
+                ><input
+                  id="header-file"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  class="form-control"
+                  (change)="onFileSelected($event)"
+                />
+              </div>
+              <div>
+                <h4>Colonne par colonne</h4>
+                <p>Définissez vos en-têtes et les variables à insérer dans les messages.</p>
+                <div class="actions">
+                  <button type="button" class="btn btn-outline-primary" (click)="addColumn()">
+                    Ajouter une colonne</button
+                  ><button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="addColumn('TELEPHONE')"
+                  >
+                    + Téléphone</button
+                  ><button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    (click)="addColumn('PRENOM')"
+                  >
+                    + Prénom
+                  </button>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+          @if (selectedFile()) {
+            <div class="import-settings" [formGroup]="importOptions">
+              <p>
+                <strong>{{ selectedFile()?.name }}</strong>
+                @if (analyzing()) {
+                  <span role="status"> — Lecture en cours…</span>
+                }
+              </p>
+              <div class="details-grid">
+                <div>
+                  <label for="header-sheet">Feuille</label>
+                  @if (analysis()?.sheetNames?.length) {
+                    <select
+                      id="header-sheet"
+                      class="form-select"
+                      formControlName="sheetNumber"
+                      [attr.disabled]="analyzing() ? '' : null"
+                    >
+                      @for (sheet of analysis()?.sheetNames; track $index) {
+                        <option [ngValue]="$index + 1">{{ sheet }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <input
+                      id="header-sheet"
+                      class="form-control"
+                      type="number"
+                      min="1"
+                      step="1"
+                      formControlName="sheetNumber"
+                    />
+                  }
+                </div>
+                <div>
+                  <label for="header-line">Ligne des en-têtes</label
+                  ><input
+                    id="header-line"
+                    class="form-control"
+                    type="number"
+                    min="1"
+                    step="1"
+                    formControlName="headerRow"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-outline-secondary mt-2"
+                (click)="analyzeHeaders()"
+                [disabled]="analyzing() || importOptions.invalid || saving()"
+              >
+                Lire les en-têtes
+              </button>
+              @if (analysis(); as result) {
+                <p class="mt-3">
+                  {{ result.headers.length }} en-tête(s) détecté(s) :
+                  <strong>{{ result.headers.join(' · ') }}</strong>
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-atlas"
+                  (click)="addImportedHeaders()"
+                  [disabled]="analyzing() || saving()"
+                >
+                  Ajouter ces en-têtes au modèle
+                </button>
+              }
+            </div>
+          }
+          <p class="column-help">
+            Cochez les colonnes à conserver. Pour les SMS et WhatsApp, désignez une colonne
+            destinataire. Les numéros restent du texte pour conserver les zéros initiaux.
+          </p>
+          @if (loading()) {
+            <p role="status">Chargement des colonnes…</p>
+          }
+          <fieldset [disabled]="saving() || loading() || analyzing()">
+            <div class="table-responsive">
+              <table class="table align-middle columns-table">
+                <caption>
+                  Colonnes du modèle, dans l’ordre du fichier Excel à télécharger.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Garder</th>
+                    <th scope="col">En-tête Excel / Libellé</th>
+                    <th scope="col">Variable du message</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Obligatoire</th>
+                    <th scope="col">Cible SMS</th>
+                    <th scope="col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody formArrayName="columns">
+                  @for (column of columns.controls; track column; let i = $index) {
+                    <tr [formGroupName]="i" [class.excluded]="!column.controls.included.value">
+                      <td>
+                        <input
+                          type="checkbox"
+                          formControlName="included"
+                          [attr.aria-label]="'Conserver la colonne ' + (i + 1)"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          class="form-control"
+                          formControlName="headerName"
+                          [attr.aria-label]="'En-tête Excel de la colonne ' + (i + 1)"
+                          placeholder="Téléphone client"
+                        /><input
+                          class="form-control form-control-sm mt-1"
+                          formControlName="label"
+                          [attr.aria-label]="'Libellé de la colonne ' + (i + 1)"
+                          placeholder="Libellé descriptif"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          class="form-control font-monospace"
+                          formControlName="code"
+                          [attr.aria-label]="'Code variable de la colonne ' + (i + 1)"
+                          placeholder="TELEPHONE"
+                        /><small>{{ '{{' + column.controls.code.value + '}}' }}</small>
+                      </td>
+                      <td>
+                        <select
+                          class="form-select"
+                          formControlName="dataType"
+                          [attr.aria-label]="'Type de la colonne ' + (i + 1)"
+                        >
+                          @for (type of dataTypes; track type) {
+                            <option [value]="type">{{ typeLabels[type] }}</option>
+                          }
+                        </select>
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          formControlName="required"
+                          [attr.aria-label]="'Colonne ' + (i + 1) + ' obligatoire'"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="radio"
+                          name="sms-recipient"
+                          [checked]="column.controls.phone.value"
+                          (change)="selectPhone(i)"
+                          [attr.aria-label]="
+                            'Utiliser la colonne ' + (i + 1) + ' comme destinataire SMS'
+                          "
+                        />
+                      </td>
+                      <td>
+                        <div class="row-actions">
+                          <button
+                            type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            (click)="moveColumn(i, -1)"
+                            [disabled]="i === 0"
+                            aria-label="Monter la colonne"
+                          >
+                            ↑</button
+                          ><button
+                            type="button"
+                            class="btn btn-outline-secondary btn-sm"
+                            (click)="moveColumn(i, 1)"
+                            [disabled]="i === columns.length - 1"
+                            aria-label="Descendre la colonne"
+                          >
+                            ↓</button
+                          ><button
+                            type="button"
+                            class="btn btn-outline-danger btn-sm"
+                            (click)="removeColumn(i)"
+                            aria-label="Retirer la colonne"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty-state">
+                        Ajoutez vos premières colonnes à partir d’un fichier ou du bouton « Ajouter
+                        une colonne ».
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <div class="save-bar">
+              <span>{{
+                form.dirty
+                  ? 'Modifications à enregistrer'
+                  : 'Structure enregistrée ou nouveau modèle'
+              }}</span
+              ><button
+                class="btn btn-atlas"
+                type="submit"
+                [disabled]="!workspace.activeCompany()?.id"
+              >
+                {{ saving() ? 'Enregistrement…' : 'Enregistrer le modèle' }}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+      @if (selectedId()) {
+        <section class="atlas-card message-editor" aria-labelledby="message-title">
+          <div class="editor-heading">
+            <div>
+              <h3 id="message-title">Messages associés</h3>
+              <p>Préparez un message réutilisable avec les variables de ce modèle.</p>
+            </div>
+            <a
+              class="btn btn-atlas"
+              routerLink="/campaigns/create"
+              [queryParams]="{ profileId: selectedId() }"
+              >Utiliser dans une campagne</a
+            >
+          </div>
+          <form [formGroup]="message" (ngSubmit)="saveMessage()">
+            <fieldset [disabled]="saving() || loading()">
+              <label for="message-name">Nom du message</label
+              ><input id="message-name" class="form-control" formControlName="name" /><label
+                for="message-content"
+                class="mt-3"
+                >Contenu</label
+              ><textarea
+                id="message-content"
+                class="form-control"
+                rows="4"
+                formControlName="content"
+              ></textarea>
+              <div class="actions my-3">
+                @for (column of columns.controls; track column) {
+                  @if (column.controls.included.value && column.controls.code.value) {
+                    <button
+                      type="button"
+                      class="btn btn-outline-secondary btn-sm"
+                      (click)="insertVariable(column.controls.code.value)"
+                    >
+                      {{ '{{' + column.controls.code.value + '}}' }}
+                    </button>
+                  }
+                }
+              </div>
+              <button
+                type="submit"
+                class="btn btn-outline-primary"
+                [disabled]="form.dirty || message.invalid"
+              >
+                Enregistrer le message
+              </button>
+            </fieldset>
+          </form>
+          <div class="saved-messages">
+            @for (template of templates(); track template.id) {
+              <article>
+                <strong>{{ template.name }}</strong>
+                <p>{{ template.content }}</p>
+                <button
+                  type="button"
+                  class="btn btn-link"
+                  (click)="
+                    message.patchValue({
+                      name: template.name + ' (copie)',
+                      content: template.content,
+                    })
+                  "
+                >
+                  Reprendre dans un nouveau message
+                </button>
+              </article>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  </div>
 </div>

@@ -1,5 +1,7 @@
 package com.calipso.excelvariable;
 
+import com.calipso.auth.CompanyAccess;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ExcelVariableController {
 
+    private final CompanyAccess access;
+
     private final ExcelVariableRepository variableRepository;
     private final ExcelImportProfileRepository profileRepository;
 
@@ -23,6 +27,7 @@ public class ExcelVariableController {
         ExcelImportProfile profile = profileRepository.findById(request.profileId())
                 .orElseThrow(() -> new RuntimeException("Profil d'import introuvable"));
 
+        access.requireCompany(profile.getCompany());
         String code = normalizeCode(request.code());
 
         variableRepository.findByProfileIdAndCode(profile.getId(), code)
@@ -51,7 +56,8 @@ public class ExcelVariableController {
 
     @GetMapping("/profile/{profileId}")
     public List<ExcelVariable> findByProfile(@PathVariable Long profileId) {
-        return variableRepository.findByProfileIdAndActiveTrue(profileId);
+        access.requireProfile(profileId);
+        return variableRepository.findByProfileIdAndActiveTrueOrderByColumnOrderAscIdAsc(profileId);
     }
 
     @DeleteMapping("/{id}")
@@ -59,6 +65,7 @@ public class ExcelVariableController {
         ExcelVariable variable = variableRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Variable introuvable"));
 
+        access.requireCompany(variable.getCompany());
         variable.setActive(false);
         variableRepository.save(variable);
     }

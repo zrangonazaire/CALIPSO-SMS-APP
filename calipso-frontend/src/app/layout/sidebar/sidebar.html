@@ -1,80 +1,107 @@
-<aside class="sidebar text-white d-flex flex-column">
-  <div class="brand-block">
-    <div class="brand-mark">
-      <i class="bi bi-chat-dots-fill"></i>
-    </div>
-    <div>
-      <h4 class="mb-0 fw-bold">Calipso SMS</h4>
-      <small class="text-white-50">Campagnes et envois cibles</small>
-    </div>
+<aside class="sidebar">
+  <div class="brand-header">
+    <a routerLink="/dashboard" class="brand-logo">
+      <div class="logo-icon">
+        <i class="bi bi-send-check-fill"></i>
+      </div>
+      <div class="logo-text">
+        <span class="brand-name">Calipso<span class="brand-dot">.</span></span>
+        <span class="brand-tag">Studio Multicanal</span>
+      </div>
+    </a>
   </div>
 
-  <nav class="nav flex-column px-3 py-4">
-    <span class="nav-section">Pilotage</span>
-    <a routerLink="/dashboard" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-speedometer2"></i>
-      Tableau de bord
+  <div class="cta-wrapper">
+    <a routerLink="/campaigns/create" class="btn-new-campaign">
+      <i class="bi bi-magic"></i>
+      <span>Créer une campagne</span>
     </a>
+  </div>
 
-    <a routerLink="/sms-api" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-broadcast-pin"></i>
-      API SMS
-    </a>
+  <nav class="sidebar-nav">
+    <div class="nav-group">
+      <span class="nav-group-label">Campagnes & Envois</span>
 
-    <span class="nav-section">Configuration</span>
-    <a routerLink="/companies" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-buildings"></i>
-      Societes clientes
-    </a>
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+      >
+        <i class="bi bi-grid-1x2-fill"></i>
+        <span>Vue d'ensemble</span>
+      </a>
 
-    <a routerLink="/subscription" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-credit-card-2-front"></i>
-      Credits SMS
-    </a>
+      <a
+        routerLink="/campaigns"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+      >
+        <i class="bi bi-megaphone-fill"></i>
+        <span>Mes campagnes</span>
+      </a>
 
-    <a routerLink="/import-profiles" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-diagram-3"></i>
-      Profil de Campagne
-    </a>
+      <a routerLink="/manual-sms" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-lightning-charge-fill"></i>
+        <span>Envoi Express</span>
+        <em class="nav-badge">Direct</em>
+      </a>
+    </div>
 
-    <a routerLink="/excel-variables" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-table"></i>
-      Colonnes Excel
-    </a>
+    <div class="nav-group">
+      <span class="nav-group-label">Studio & Suivi</span>
 
-    <a routerLink="/sms-templates" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-envelope-paper"></i>
-      Modeles SMS
-    </a>
+      <a routerLink="/sms-templates" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-collection-fill"></i>
+        <span>Modèles de messages</span>
+      </a>
 
-    <span class="nav-section">Envoi</span>
-    <a routerLink="/campaigns" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-send"></i>
-      Campagnes masse
-    </a>
+      <a routerLink="/import-profiles" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-file-earmark-spreadsheet-fill"></i>
+        <span>En-têtes SMS / Excel</span>
+      </a>
 
-    <a routerLink="/manual-sms" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-chat-left-text"></i>
-      Envoi cible
-    </a>
+      <a routerLink="/sms-history" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-activity"></i>
+        <span>Journal d'activité</span>
+      </a>
 
-    <a routerLink="/sms-history" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-clock-history"></i>
-      Historique SMS
-    </a>
+      <a routerLink="/subscription" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-wallet2"></i>
+        <span>Crédits & Forfaits</span>
+      </a>
+    </div>
 
-    <a routerLink="/recipients" routerLinkActive="active" class="nav-link">
-      <i class="bi bi-people"></i>
-      Destinataires importes
-    </a>
+    <div class="nav-group">
+      <span class="nav-group-label">Configuration</span>
+
+      <a routerLink="/sms-api" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-plug-fill"></i>
+        <span>Canaux & API</span>
+      </a>
+
+      <a routerLink="/companies" routerLinkActive="active" class="nav-item">
+        <i class="bi bi-building-gear"></i>
+        <span>Mon espace & Équipe</span>
+      </a>
+    </div>
   </nav>
 
-  <div class="sidebar-help">
-    <strong>Flux conseille</strong>
-    <span>Societe -> Credits -> Profil Excel -> Modele -> Campagne</span>
-  </div>
-
-  <div class="mt-auto px-4 py-3 border-top border-light border-opacity-10">
-    <small class="text-white-50">© 2026 BZ-DATA</small>
+  <div class="wallet-widget" *ngIf="workspace.activeCompany() as company">
+    <div class="wallet-top">
+      <span class="wallet-label">Solde disponible</span>
+      <span class="wallet-channels">
+        <i class="bi bi-chat-dots-fill text-primary" title="SMS"></i>
+        <i class="bi bi-whatsapp text-success" title="WhatsApp"></i>
+        <i class="bi bi-envelope-fill" style="color: #7c3aed" title="Email"></i>
+      </span>
+    </div>
+    <div class="wallet-amount">
+      {{ company.smsBalance || 0 | number: '1.0-0' }} <small>crédits</small>
+    </div>
+    <a routerLink="/subscription" class="wallet-recharge-link">
+      <i class="bi bi-plus-circle-fill"></i> Recharger mon compte
+    </a>
   </div>
 </aside>

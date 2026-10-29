@@ -1,8 +1,9 @@
+import { DatePeriod, periodParams } from '../models/date-period';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { API_BASE } from '../api';
-import { Campaign } from '../models/api.models';
+import { Campaign, FileAnalysisResponse, WizardCampaignRequest } from '../models/api.models';
 
 @Injectable({
   providedIn: 'root',
@@ -12,12 +13,28 @@ export class CampaignService {
 
   constructor(private http: HttpClient) {}
 
-  findByCompany(companyId: number): Observable<Campaign[]> {
-    return this.http.get<Campaign[]>(`${this.apiUrl}/company/${companyId}`);
+  findByCompany(companyId: number, period: DatePeriod = {}): Observable<Campaign[]> {
+    return this.http.get<Campaign[]>(`${this.apiUrl}/company/${companyId}`, { params: periodParams(period) });
   }
 
   create(campaign: Campaign): Observable<Campaign> {
     return this.http.post<Campaign>(this.apiUrl, campaign);
+  }
+
+  analyzeFile(file: File, sheetIndex = 0, headerRow = 1): Observable<FileAnalysisResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('sheetIndex', String(sheetIndex));
+    formData.append('headerRow', String(headerRow));
+    return this.http.post<FileAnalysisResponse>(`${this.apiUrl}/analyze-file`, formData);
+  }
+
+  createFromWizard(request: WizardCampaignRequest): Observable<Campaign> {
+    return this.http.post<Campaign>(`${this.apiUrl}/wizard`, request);
+  }
+
+  get sampleExcelUrl(): string {
+    return `${this.apiUrl}/sample-excel`;
   }
 
   importExcel(campaignId: number, file: File): Observable<Campaign> {

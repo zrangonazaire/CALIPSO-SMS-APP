@@ -40,14 +40,21 @@ public class ExcelVariable {
     @Column(nullable = false)
     private String label;
 
+    private String headerName;
+
+    private Integer columnOrder;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DataType dataType;
 
+    @Builder.Default
     private Boolean required = false;
 
+    @Builder.Default
     private Boolean phone = false;
 
+    @Builder.Default
     private Boolean active = true;
 
     private LocalDateTime createdAt;
