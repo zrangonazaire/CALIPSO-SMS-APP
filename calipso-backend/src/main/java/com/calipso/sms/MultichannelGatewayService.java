@@ -1,13 +1,17 @@
 package com.calipso.sms;
 
 import com.calipso.campaign.CampaignChannel;
+import com.calipso.integration.CompanyIntegrationSettingsService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.util.Properties;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -31,6 +35,7 @@ import java.util.UUID;
 public class MultichannelGatewayService {
 
     private final OrangeSmsClient orangeSmsClient;
+    private final CompanyIntegrationSettingsService integrationSettings;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${whatsapp.cloud.access-token:}")
@@ -61,15 +66,35 @@ public class MultichannelGatewayService {
             String ctaLabel,
             String ctaUrl
     ) {
+        return dispatch(null, channel, message, subject, senderPhone, recipientTarget, mediaUrl, ctaLabel, ctaUrl);
+    }
+
+    public SmsDeliveryResult dispatch(
+            Long companyId,
+            CampaignChannel channel,
+            String message,
+            String subject,
+            String senderPhone,
+            String recipientTarget,
+            String mediaUrl,
+            String ctaLabel,
+            String ctaUrl
+    ) {
+        var companySettings = companyId == null ? null : integrationSettings.findDecrypted(companyId);
         CampaignChannel effectiveChannel = channel == null ? CampaignChannel.SMS : channel;
         return switch (effectiveChannel) {
-            case SMS -> sendSmsWithFallback(message, senderPhone, recipientTarget);
-            case WHATSAPP -> sendWhatsApp(message, recipientTarget, mediaUrl, ctaLabel, ctaUrl);
-            case EMAIL -> sendEmail(subject, message, senderPhone, recipientTarget, mediaUrl, ctaLabel, ctaUrl);
+            case SMS -> sendSmsWithFallback(message, senderPhone, recipientTarget, companySettings);
+            case WHATSAPP -> sendWhatsApp(message, recipientTarget, mediaUrl, ctaLabel, ctaUrl, companySettings);
+            case EMAIL -> sendEmail(subject, message, senderPhone, recipientTarget, mediaUrl, ctaLabel, ctaUrl, companySettings);
         };
     }
 
-    private SmsDeliveryResult sendSmsWithFallback(String message, String senderPhone, String recipientTarget) {
+    private SmsDeliveryResult sendSmsWithFallback(
+            String message,
+            String senderPhone,
+            String recipientTarget,
+            CompanyIntegrationSettingsService.DecryptedSettings companySettings
+    ) {
         String normalizedPhone = orangeSmsClient.normalizePhone(recipientTarget);
         if (normalizedPhone == null || normalizedPhone.replaceAll("\\D", "").length() < 8) {
             return SmsDeliveryResult.failed(400, "Numéro SMS destinataire invalide: " + recipientTarget);
@@ -78,32 +103,19 @@ public class MultichannelGatewayService {
             return SmsDeliveryResult.failed(400, "Message SMS vide");
         }
 
-        SmsDeliveryResult liveResult = orangeSmsClient.sendSms(message, senderPhone, normalizedPhone);
-        if (liveResult.sent()) {
-            return liveResult;
+        String effectiveSender = companySettings != null && companySettings.smsSenderAddress() != null
+                ? companySettings.smsSenderAddress() : senderPhone;
+        boolean hasCompanyOrangeCredentials = companySettings != null
+                && (companySettings.orangeClientId() != null || companySettings.orangeClientSecret() != null);
+        if (hasCompanyOrangeCredentials
+                && (companySettings.orangeClientId() == null || companySettings.orangeClientSecret() == null)) {
+            return SmsDeliveryResult.failed(503, "Configuration Orange incomplète pour cette entreprise.");
         }
-
-        String smsId = "sms." + UUID.randomUUID().toString().substring(0, 12);
-        String simulatedJson = String.format(
-                "{\"outboundSMSMessageRequest\":{\"address\":[\"tel:%s\"],\"senderAddress\":\"tel:%s\",\"resourceURL\":\"sms://calipso-gateway/requests/%s\",\"deliveryInfoList\":{\"deliveryInfo\":[{\"address\":\"tel:%s\",\"deliveryStatus\":\"DeliveredToTerminal\"}]}}}",
-                normalizedPhone,
-                (senderPhone != null && !senderPhone.isBlank()) ? senderPhone : "+2250000",
-                smsId,
-                normalizedPhone
-        );
-        log.warn(
-                "[SMS Gateway] API Orange externe non disponible ({}), livraison prise en charge par la passerelle SMS Calipso vers {} (ID={})",
-                liveResult.errorMessage(),
-                normalizedPhone,
-                smsId
-        );
-        return SmsDeliveryResult.sent(
-                201,
-                simulatedJson,
-                "sms://calipso-gateway/requests/" + smsId,
-                smsId,
-                "DeliveredToTerminal"
-        );
+        SmsDeliveryResult liveResult = hasCompanyOrangeCredentials
+                ? orangeSmsClient.sendSmsForCompany(message, effectiveSender, normalizedPhone,
+                        companySettings.orangeClientId(), companySettings.orangeClientSecret(), companySettings.orangeSenderName())
+                : orangeSmsClient.sendSms(message, effectiveSender, normalizedPhone);
+        return liveResult;
     }
 
     public String normalizeTarget(CampaignChannel channel, String rawTarget) {
@@ -143,7 +155,8 @@ public class MultichannelGatewayService {
             String recipientPhone,
             String mediaUrl,
             String ctaLabel,
-            String ctaUrl
+            String ctaUrl,
+            CompanyIntegrationSettingsService.DecryptedSettings companySettings
     ) {
         String normalizedPhone = orangeSmsClient.normalizePhone(recipientPhone);
         if (normalizedPhone == null || normalizedPhone.isBlank()) {
@@ -152,10 +165,22 @@ public class MultichannelGatewayService {
 
         String fullBody = buildRichTextBody(message, mediaUrl, ctaLabel, ctaUrl);
 
-        if (whatsappAccessToken != null && !whatsappAccessToken.isBlank()
-                && whatsappPhoneNumberId != null && !whatsappPhoneNumberId.isBlank()) {
+        String accessToken = companySettings != null && companySettings.whatsappAccessToken() != null
+                ? companySettings.whatsappAccessToken() : whatsappAccessToken;
+        String phoneNumberId = companySettings != null && companySettings.whatsappPhoneNumberId() != null
+                ? companySettings.whatsappPhoneNumberId() : whatsappPhoneNumberId;
+        String apiUrl = companySettings != null && companySettings.whatsappApiUrl() != null
+                ? companySettings.whatsappApiUrl() : whatsappApiUrl;
+        if (apiUrl != null) apiUrl = apiUrl.replaceAll("/+$", "");
+        boolean hasTenantWhatsAppSettings = companySettings != null
+                && (companySettings.whatsappAccessToken() != null || companySettings.whatsappPhoneNumberId() != null);
+        if (hasTenantWhatsAppSettings
+                && (companySettings.whatsappAccessToken() == null || companySettings.whatsappPhoneNumberId() == null)) {
+            return SmsDeliveryResult.failed(503, "Configuration WhatsApp incomplète pour cette entreprise.");
+        }
+        if (accessToken != null && !accessToken.isBlank() && phoneNumberId != null && !phoneNumberId.isBlank()) {
             try {
-                String url = whatsappApiUrl + "/" + whatsappPhoneNumberId.trim() + "/messages";
+                String url = apiUrl + "/" + phoneNumberId.trim() + "/messages";
                 Map<String, Object> payload = new LinkedHashMap<>();
                 payload.put("messaging_product", "whatsapp");
                 payload.put("recipient_type", "individual");
@@ -169,7 +194,7 @@ public class MultichannelGatewayService {
                         .build();
                 HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                         .timeout(Duration.ofSeconds(20))
-                        .header("Authorization", "Bearer " + whatsappAccessToken.trim())
+                        .header("Authorization", "Bearer " + accessToken.trim())
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                         .build();
@@ -184,8 +209,16 @@ public class MultichannelGatewayService {
                 }
                 return SmsDeliveryResult.failed(response.statusCode(), "WhatsApp Cloud API: " + response.body());
             } catch (Exception e) {
+                if (hasTenantWhatsAppSettings) {
+                    log.warn("[WhatsApp Cloud] Échec de l’envoi configuré pour l’entreprise: {}", e.getMessage());
+                    return SmsDeliveryResult.failed(502, "Échec de l’envoi auprès de WhatsApp Cloud.");
+                }
                 log.warn("[WhatsApp Cloud] Bascule sur passerelle WhatsApp Sandbox suite à: {}", e.getMessage());
             }
+        }
+
+        if (hasTenantWhatsAppSettings) {
+            return SmsDeliveryResult.failed(503, "Configuration WhatsApp incomplète pour cette entreprise.");
         }
 
         String wamid = "wamid." + Base64.getUrlEncoder().withoutPadding()
@@ -213,7 +246,8 @@ public class MultichannelGatewayService {
             String recipientEmail,
             String mediaUrl,
             String ctaLabel,
-            String ctaUrl
+            String ctaUrl,
+            CompanyIntegrationSettingsService.DecryptedSettings companySettings
     ) {
         String cleanEmail = recipientEmail == null ? "" : recipientEmail.trim().toLowerCase();
         if (!isValidTarget(CampaignChannel.EMAIL, cleanEmail)) {
@@ -225,6 +259,11 @@ public class MultichannelGatewayService {
                 : subject.trim();
         String htmlContent = buildHtmlEmail(finalSubject, message, senderNameOrAddress, mediaUrl, ctaLabel, ctaUrl);
         String messageId = "mail." + UUID.randomUUID().toString().substring(0, 12) + "@calipso.ci";
+
+        boolean configuredTenantMail = companySettings != null && companySettings.smtpHost() != null;
+        if (configuredTenantMail) {
+            return sendTenantEmail(companySettings, cleanEmail, finalSubject, htmlContent, messageId);
+        }
 
         boolean deliveredSmtp = trySendViaSmtpSocket(smtpHost, smtpPort, smtpFrom, cleanEmail, finalSubject, htmlContent, messageId);
         if (!deliveredSmtp && smtpPort != 51025) {
@@ -246,6 +285,42 @@ public class MultichannelGatewayService {
                 messageId,
                 deliveredSmtp ? "DeliveredToSmtp" : "AcceptedByGateway"
         );
+    }
+
+    private SmsDeliveryResult sendTenantEmail(
+            CompanyIntegrationSettingsService.DecryptedSettings settings,
+            String recipient,
+            String subject,
+            String htmlContent,
+            String messageId
+    ) {
+        try {
+            JavaMailSenderImpl sender = new JavaMailSenderImpl();
+            sender.setHost(settings.smtpHost());
+            sender.setPort(settings.smtpPort() == null ? 587 : settings.smtpPort());
+            sender.setUsername(settings.smtpUsername());
+            sender.setPassword(settings.smtpPassword());
+            Properties properties = sender.getJavaMailProperties();
+            properties.put("mail.smtp.auth", settings.smtpUsername() != null && !settings.smtpUsername().isBlank());
+            properties.put("mail.smtp.starttls.enable", settings.smtpStartTls());
+            properties.put("mail.smtp.starttls.required", settings.smtpStartTls());
+            properties.put("mail.smtp.connectiontimeout", "10000");
+            properties.put("mail.smtp.timeout", "20000");
+            var mimeMessage = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
+            helper.setFrom(settings.smtpFrom() == null ? smtpFrom : settings.smtpFrom());
+            helper.setTo(recipient);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            mimeMessage.setHeader("Message-ID", "<" + messageId + ">");
+            sender.send(mimeMessage);
+            return SmsDeliveryResult.sent(200,
+                    "{\"channel\":\"EMAIL\",\"messageId\":\"" + messageId + "\"}",
+                    "mailto:" + recipient, messageId, "DeliveredToSmtp");
+        } catch (Exception exception) {
+            log.error("[Email Gateway] Échec du relais SMTP configuré pour l’entreprise.", exception);
+            return SmsDeliveryResult.failed(502, "Échec de l’envoi auprès du serveur SMTP configuré.");
+        }
     }
 
     private boolean trySendViaSmtpSocket(

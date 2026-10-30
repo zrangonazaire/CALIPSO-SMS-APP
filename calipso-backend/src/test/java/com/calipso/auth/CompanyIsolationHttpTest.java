@@ -8,6 +8,7 @@ import com.calipso.config.DataType;
 import com.calipso.excel.*;
 import com.calipso.excelvariable.*;
 import com.calipso.importprofile.*;
+import com.calipso.integration.*;
 import com.calipso.recipient.*;
 import com.calipso.sms.*;
 import com.calipso.smstemplate.*;
@@ -19,6 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -45,6 +47,7 @@ class CompanyIsolationHttpTest {
     private final ExcelImportService excel = mock(ExcelImportService.class);
     private final HeaderModelService models = mock(HeaderModelService.class);
     private final AuthService auth = mock(AuthService.class);
+    private final CompanyIntegrationSettingsService integrationSettings = mock(CompanyIntegrationSettingsService.class);
     private final AccessSettings settings = new AccessSettings();
     private CompanyAccess access;
     private MockMvc mvc;
@@ -91,9 +94,24 @@ class CompanyIsolationHttpTest {
                 new SmsSendHistoryController(access, history),
                 new SmsApiController(access, mock(SmsApiDashboardService.class)),
                 new SubscriptionController(access, subscriptions),
-                new OrangeSmsDeliveryReceiptController(access, history))
+                new OrangeSmsDeliveryReceiptController(access, history),
+                new CompanyIntegrationSettingsController(access, integrationSettings))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .addFilters(new BearerTokenAuthFilter(auth)).build();
+    }
+
+    @Test
+    void companyIntegrationSecretsAreReservedForPlatformAdministrators() throws Exception {
+        when(integrationSettings.get(2L)).thenReturn(new CompanyIntegrationSettingsResponse(
+                2L, null, false, null, null, false, null, null, null, null, false, false, null));
+        mvc.perform(get("/api/v1/companies/2/integrations").header("Authorization", "Bearer magiser"))
+                .andExpect(status().isForbidden());
+
+        var platformAdmin = CompanyUser.builder().id(99L).company(magiser)
+                .role(CompanyUserRole.ADMIN).active(true).build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(platformAdmin, null, List.of()));
+        assertEquals(2L, new CompanyIntegrationSettingsController(access, integrationSettings).get(2L).companyId());
     }
 
     @AfterEach

@@ -54,6 +54,7 @@ public class ManualSmsController {
             String normalizedTarget = gatewayService.normalizeTarget(channel, rawTarget);
 
             SmsDeliveryResult deliveryResult = gatewayService.dispatch(
+                    company.getId(),
                     channel,
                     request.message(),
                     request.subject(),

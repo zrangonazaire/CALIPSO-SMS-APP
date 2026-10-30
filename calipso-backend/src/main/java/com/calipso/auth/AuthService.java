@@ -83,6 +83,7 @@ public class AuthService {
 
         try {
             gatewayService.dispatch(
+                    user.getCompany().getId(),
                     chosenChannel,
                     message,
                     "Code de réinitialisation de votre mot de passe Calipso : " + otpCode,

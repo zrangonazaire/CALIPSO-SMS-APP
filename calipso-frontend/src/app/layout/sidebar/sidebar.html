@@ -76,6 +76,13 @@
     <div class="nav-group">
       <span class="nav-group-label">Configuration</span>
 
+      @if (workspace.isPlatformAdmin()) {
+        <a routerLink="/companies" [queryParams]="{ tab: 'integrations' }" class="nav-item">
+          <i class="bi bi-building-gear"></i>
+          <span>Intégrations entreprises</span>
+        </a>
+      }
+
       <a routerLink="/sms-api" routerLinkActive="active" class="nav-item">
         <i class="bi bi-plug-fill"></i>
         <span>Canaux & API</span>

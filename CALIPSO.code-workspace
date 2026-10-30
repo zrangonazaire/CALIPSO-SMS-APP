@@ -1,0 +1,25 @@
+{
+    "folders": [
+        { "path": "calipso-backend" },
+        { "path": "calipso-frontend" }
+    ],
+    "settings": {
+        "java.autobuild.enabled": false,
+        "java.server.launchMode": "Standard",
+        "java.import.maven.enabled": true,
+        "java.configuration.updateBuildConfiguration": "automatic"
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "type": "java",
+                "name": "CalipsoApplication",
+                "request": "launch",
+                "mainClass": "com.calipso.CalipsoApplication",
+                "projectName": "calipso",
+                "cwd": "${workspaceFolder:calipso-backend}"
+            }
+        ]
+    }
+}

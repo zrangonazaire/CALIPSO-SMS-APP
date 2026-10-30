@@ -208,6 +208,7 @@ public class CampaignController {
             String normalizedTarget = gatewayService.normalizeTarget(channel, rawTarget);
 
             SmsDeliveryResult deliveryResult = gatewayService.dispatch(
+                    campaign.getCompany().getId(),
                     channel,
                     recipient.getGeneratedMessage(),
                     campaign.getEmailSubject(),

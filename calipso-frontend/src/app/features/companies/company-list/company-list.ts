@@ -1,11 +1,22 @@
 import { CommonModule } from '@angular/common';
 import { Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/auth/auth';
-import { Company, CompanyUser, CompanyUserRole, ImportProfile } from '../../../core/models/api.models';
+import {
+  Company,
+  CompanyIntegrationSettings,
+  CompanyUser,
+  CompanyUserRole,
+  ImportProfile,
+  PlatformOverview,
+} from '../../../core/models/api.models';
 import { CompanyService } from '../../../core/services/company';
+import { CompanyIntegrationService } from '../../../core/services/company-integration';
 import { CompanyUserService } from '../../../core/services/company-user';
 import { ImportProfileService } from '../../../core/services/import-profile';
+import { PlatformService } from '../../../core/services/platform';
 import { WorkspaceService } from '../../../core/services/workspace';
 
 @Component({
@@ -20,10 +31,12 @@ export class CompanyList {
   private readonly companyService = inject(CompanyService);
   private readonly userService = inject(CompanyUserService);
   private readonly profileService = inject(ImportProfileService);
+  private readonly integrationService = inject(CompanyIntegrationService);
+  private readonly platformService = inject(PlatformService);
 
   users: CompanyUser[] = [];
   profiles: ImportProfile[] = [];
-  activeTab: 'company' | 'users' | 'security' | 'admin-companies' = 'company';
+  activeTab: 'company' | 'users' | 'security' | 'admin-companies' | 'integrations' = 'company';
   loading = false;
   error = '';
   success = '';
@@ -42,13 +55,43 @@ export class CompanyList {
 
   resetTargetUser?: CompanyUser;
   adminResetPasswordValue = '';
+  platformOverview?: PlatformOverview;
+  integrationSettings: CompanyIntegrationSettings = this.emptyIntegrationSettings();
 
   constructor() {
+    inject(ActivatedRoute).queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      this.activeTab = params.get('tab') === 'integrations' ? 'integrations' : 'company';
+    });
     effect(() => {
       const companyId = this.workspace.selectedCompanyId();
       if (companyId) {
         this.loadCompanyContext(companyId);
       }
+    });
+
+  }
+
+  loadPlatformOverview(): void {
+    this.platformService.getOverview().subscribe({
+      next: (overview) => (this.platformOverview = overview),
+      error: () => (this.error = 'Impossible de charger les statistiques de la plateforme.'),
+    });
+  }
+
+  saveIntegrations(): void {
+    if (!this.workspace.isPlatformAdmin() || !this.selectedCompanyId) return;
+    this.integrationService.save(this.selectedCompanyId, this.integrationSettings).subscribe({
+      next: (settings) => {
+        this.integrationSettings = {
+          ...settings,
+          orangeClientId: undefined,
+          orangeClientSecret: undefined,
+          whatsappAccessToken: undefined,
+          smtpPassword: undefined,
+        };
+        this.success = 'Les intégrations de l’entreprise ont été enregistrées. Les secrets ne sont jamais renvoyés par le serveur.';
+      },
+      error: (err) => (this.error = err.error?.message || 'Impossible d’enregistrer les intégrations.'),
     });
   }
 
@@ -74,6 +117,7 @@ export class CompanyList {
     this.userForm.companyId = companyId;
     const company = this.selectedCompany;
     this.settingsForm = company ? { ...company } : this.emptyCompanyForm();
+    this.integrationSettings = this.emptyIntegrationSettings(companyId);
 
     if (!companyId) {
       this.users = [];
@@ -90,6 +134,14 @@ export class CompanyList {
       next: (profiles) => (this.profiles = profiles),
       error: () => (this.error = ''),
     });
+
+    if (this.workspace.isPlatformAdmin()) {
+      this.integrationService.get(companyId).subscribe({
+        next: (settings) => (this.integrationSettings = { ...settings }),
+        error: () => (this.error = 'Impossible de charger les intégrations de cette entreprise.'),
+      });
+      this.loadPlatformOverview();
+    }
   }
 
   createCompany(): void {
@@ -235,6 +287,16 @@ export class CompanyList {
       password: '',
       phone: '',
       role: 'OPERATOR',
+    };
+  }
+
+  private emptyIntegrationSettings(companyId = this.selectedCompanyId): CompanyIntegrationSettings {
+    return {
+      companyId,
+      orangeCredentialsConfigured: false,
+      whatsappCredentialsConfigured: false,
+      smtpPasswordConfigured: false,
+      smtpStartTls: true,
     };
   }
 }

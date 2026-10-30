@@ -9,6 +9,7 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, Long> 
     List<CompanyUser> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
     boolean existsByUsernameIgnoreCase(String username);
     boolean existsByPasswordHashIsNotNull();
+    long countByCompanyIdAndActiveTrue(Long companyId);
     Optional<CompanyUser> findByUsernameIgnoreCase(String username);
     Optional<CompanyUser> findFirstByEmailIgnoreCase(String email);
     Optional<CompanyUser> findFirstByUsernameIgnoreCaseOrEmailIgnoreCase(String username, String email);

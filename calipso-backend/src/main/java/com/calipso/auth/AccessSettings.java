@@ -15,4 +15,15 @@ public class AccessSettings {
     // No account receives platform access unless its persisted ID is explicitly configured.
     private Set<Long> platformAdminUserIds = new HashSet<>();
     private String paymentWebhookSecret = "";
+    private Bootstrap bootstrap = new Bootstrap();
+
+    @Getter
+    @Setter
+    public static class Bootstrap {
+        private String username = "";
+        private String password = "";
+        private String email = "";
+        private String fullName = "Administrateur plateforme";
+        private String companyName = "Calipso Platform";
+    }
 }

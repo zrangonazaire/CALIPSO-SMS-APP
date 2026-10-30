@@ -48,9 +48,13 @@ L’accès d’administration de plateforme nécessite **à la fois** le rôle `
 et l’identifiant persistant d’un compte existant dans la variable serveur
 `CALIPSO_PLATFORM_ADMIN_USER_IDS` (identifiants séparés par des virgules).
 Cette liste est vide par défaut. Aucun compte n’est promu automatiquement,
-y compris le premier compte créé ou un compte inscrit via `/auth/setup`.
-Vérifiez les comptes concernés avant de renseigner cette configuration ; elle
-ne peut pas être modifiée depuis la gestion des membres d’une entreprise.
+y compris le premier compte créé ou un compte inscrit via `/auth/setup`. Le seul
+amorçage automatique est explicite : configurez
+`CALIPSO_SECURITY_BOOTSTRAP_USERNAME` avec `CALIPSO_SECURITY_BOOTSTRAP_PASSWORD`
+et la même adresse dans `CALIPSO_SECURITY_BOOTSTRAP_EMAIL`. À chaque démarrage,
+un compte existant n’est autorisé que si son rôle et son adresse e-mail
+correspondent à cette configuration. Vérifiez soigneusement les valeurs; la
+liste d’autorisations ne peut pas être modifiée depuis les membres d’une entreprise.
 Le serveur renvoie le droit effectif dans `platformAdmin` à la connexion et via
 `/auth/me`. Le sélecteur multi-entreprises et l’administration de plateforme
 sont affichés uniquement pour ces comptes autorisés.
@@ -72,3 +76,56 @@ Tests d’isolation (depuis `calipso-backend`) :
 ```powershell
 mvn.cmd '-Dtest=CompanyIsolationHttpTest,PlatformPrivilegesTest' test
 ```
+# Administration plateforme
+
+Le compte superadministrateur est créé une seule fois au démarrage lorsque
+`CALIPSO_SECURITY_BOOTSTRAP_USERNAME` est défini. Pour initialiser le compte
+`admin`, injectez les variables suivantes dans l’environnement du backend ou
+dans le gestionnaire de secrets de votre hébergeur :
+
+```text
+CALIPSO_SECURITY_BOOTSTRAP_USERNAME=admin
+CALIPSO_SECURITY_BOOTSTRAP_PASSWORD=<mot de passe fourni, stocké comme secret>
+CALIPSO_SECURITY_BOOTSTRAP_EMAIL=<adresse e-mail d’administration>
+```
+
+Le mot de passe n’est pas livré avec le code et est stocké en base sous forme
+hachée BCrypt. Ne placez pas sa valeur dans un fichier versionné. Après le
+premier démarrage, le compte reste administrateur plateforme; retirez le mot
+de passe du secret d’amorçage si votre processus de déploiement le permet,
+mais conservez le nom d’utilisateur pour que l’autorisation de plateforme
+soit restaurée après un redémarrage.
+
+Les identifiants Orange, WhatsApp Cloud et SMTP configurés par entreprise sont
+chiffrés AES-GCM en base. Avant de les enregistrer, définissez
+`CALIPSO_INTEGRATIONS_ENCRYPTION_KEY` avec une clé aléatoire Base64 de 32
+octets (par exemple générée par `openssl rand -base64 32`) dans le gestionnaire
+de secrets du backend. Cette clé doit rester stable et être sauvegardée de
+manière sécurisée : les secrets déjà stockés ne pourront pas être déchiffrés
+avec une autre clé. L’écran « Intégrations entreprise » et la synthèse
+multi-entreprises sont réservés au superadministrateur.
+
+## Orange SMS Côte d’Ivoire
+
+La configuration par entreprise se trouve dans **Configuration → Intégrations
+entreprises**, avec un compte superadministrateur. Sélectionnez l’entreprise,
+puis saisissez ses Client ID et Client Secret issus de l’application Orange
+Developer abonnée à **SMS Côte d’Ivoire**. Un bundle Orange valide et crédité est
+nécessaire, en plus des crédits internes Calipso.
+
+L’adresse technique est `tel:+2250000`, encodée `tel%3A%2B2250000` dans l’URL.
+Le nom visible (par exemple `MAGISER`) se configure séparément dans **Nom
+d’expéditeur** : 11 caractères alphanumériques ou espaces maximum, préalablement
+approuvés par Orange. Sans nom personnalisé, Orange utilise celui du compte.
+Les destinataires sont des numéros ivoiriens à dix chiffres, préfixés par `+225`.
+
+L’authentification utilise OAuth 2.0 client credentials sur
+`https://api.orange.com/oauth/v3/token`, puis l’envoi utilise Bearer sur
+`https://api.orange.com/smsmessaging/v1/outbound/tel%3A%2B2250000/requests`.
+Les jetons des comptes entreprise sont réutilisés jusqu’à expiration et renouvelés
+après HTTP 401. HTTP 201 signifie accepté par Orange, pas livré au téléphone.
+Un échec Orange reste un échec : aucun succès de livraison n’est simulé.
+Les accusés réels nécessitent une URL HTTPS publique sur le port 443, enregistrée
+auprès d’Orange ; la configuration locale seule ne les active pas.
+
+Référence officielle : https://developer.orange.com/apis/sms/getting-started

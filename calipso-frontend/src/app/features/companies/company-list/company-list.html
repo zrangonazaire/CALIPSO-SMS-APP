@@ -48,6 +48,13 @@
         (click)="activeTab = 'admin-companies'">
         <i class="bi bi-buildings me-1"></i> Administration Multi-Sociétés ({{ companies.length }})
       </button>
+      <button
+        type="button"
+        *ngIf="workspace.isPlatformAdmin()"
+        [class.active]="activeTab === 'integrations'"
+        (click)="activeTab = 'integrations'">
+        <i class="bi bi-plug me-1"></i> Intégrations entreprise
+      </button>
     </div>
 
     <!-- TAB 1: PARAMÈTRES ENTREPRISE -->
@@ -276,6 +283,15 @@
 
     <!-- TAB 4: MULTI-SOCIÉTÉS (ADMIN) -->
     <section *ngIf="activeTab === 'admin-companies' && workspace.isPlatformAdmin()">
+      <div class="row g-3 mb-4" *ngIf="platformOverview as overview">
+        <div class="col-sm-6 col-xl-3"><div class="account-summary"><div><span>Entreprises actives</span><strong>{{ overview.activeCompanies }} / {{ overview.companyCount }}</strong><small>{{ overview.suspendedCompanies }} suspendue(s)</small></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="account-summary"><div><span>Crédits SMS restants</span><strong>{{ overview.remainingSmsCredits | number }}</strong><small>Solde cumulé des entreprises</small></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="account-summary"><div><span>Messages traités</span><strong>{{ overview.messageCount | number }}</strong><small>{{ overview.deliveredMessages }} délivré(s) · {{ overview.failedMessages }} échec(s)</small></div></div></div>
+        <div class="col-sm-6 col-xl-3"><div class="account-summary"><div><span>Abonnements actifs</span><strong>{{ overview.activeSubscriptions }}</strong><small>{{ overview.pendingMessages }} message(s) en attente</small></div></div></div>
+      </div>
+      <div class="d-flex justify-content-end mb-3">
+        <button type="button" class="btn-ghost" (click)="loadPlatformOverview()"><i class="bi bi-arrow-clockwise"></i> Actualiser les statistiques</button>
+      </div>
       <div class="row g-4">
         <div class="col-lg-5">
           <h5 class="fw-bold mb-3">Créer un nouveau compte client</h5>
@@ -306,8 +322,88 @@
               <em>{{ company.smsBalance || 0 }} crédits</em>
             </button>
           </div>
+          <div class="table-responsive mt-4" *ngIf="platformOverview as overview">
+            <table class="table table-sm align-middle">
+              <thead><tr><th>Entreprise</th><th>Abonnement</th><th>Messages</th><th>Équipe / campagnes</th><th>État</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let item of overview.companies">
+                  <td><strong>{{ item.name }}</strong><div class="small text-muted">{{ item.email || item.phone || '—' }}</div></td>
+                  <td>{{ item.subscriptionPlan || 'Aucun' }}<div class="small text-muted">{{ item.subscriptionStatus }}</div></td>
+                  <td>{{ item.totalMessages }} total<div class="small text-muted">{{ item.deliveredMessages }} délivré(s) · {{ item.failedMessages }} échec(s)</div></td>
+                  <td>{{ item.activeUsers }} utilisateur(s) · {{ item.campaigns }} campagne(s)</td>
+                  <td><span class="badge" [ngClass]="item.active ? 'badge-soft-success' : 'badge-soft-danger'">{{ item.active ? 'Active' : 'Suspendue' }}</span></td>
+                </tr>
+                <tr *ngIf="overview.companies.length === 0"><td colspan="5" class="text-center text-muted">Aucune entreprise inscrite.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+    </section>
+
+    <section *ngIf="activeTab === 'integrations' && workspace.isPlatformAdmin()">
+      <div class="mb-4">
+        <label for="integration-company" class="form-label">Entreprise à configurer</label>
+        <select id="integration-company" class="form-select mb-3"
+          [ngModel]="selectedCompanyId" (ngModelChange)="selectCompany($event)">
+          @for (company of companies; track company.id) {
+            <option [ngValue]="company.id">{{ company.name }}</option>
+          }
+        </select>
+        <h5 class="fw-bold mb-1">Canaux de {{ selectedCompany?.name || 'l’entreprise sélectionnée' }}</h5>
+        <p class="text-muted small mb-0">Configurez les comptes Orange SMS, WhatsApp et e-mail de cette entreprise. Les identifiants sont protégés ; laissez les champs secrets non renseignés pour conserver ceux déjà enregistrés.</p>
+      </div>
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <div class="p-3 rounded-4 border h-100">
+            <h6 class="fw-bold"><i class="bi bi-chat-dots text-primary me-1"></i> Orange SMS</h6>
+            <p class="small text-muted">API officielle Orange SMS Côte d’Ivoire. Activez SMS CI et achetez un forfait dans Orange Developer avant les envois.</p>
+            <label class="form-label" for="orange-sender-address">Adresse technique Côte d’Ivoire</label>
+            <input id="orange-sender-address" class="form-control mb-2" value="tel:+2250000" readonly>
+            <label class="form-label" for="orange-sender-name">Nom d’expéditeur approuvé par Orange</label>
+            <input id="orange-sender-name" class="form-control mb-2" [(ngModel)]="integrationSettings.orangeSenderName" maxlength="11" placeholder="MAGISER">
+            <p class="small text-muted">11 lettres, chiffres ou espaces maximum. Laissez vide pour utiliser le nom par défaut de votre compte Orange.</p>
+            <a href="https://developer.orange.com/apis/sms-ci/getting-started" target="_blank" rel="noopener noreferrer">Guide officiel Orange Côte d’Ivoire</a>
+            <label class="form-label">Client ID Orange</label>
+            <input class="form-control mb-2" [(ngModel)]="integrationSettings.orangeClientId" autocomplete="off" placeholder="{{ integrationSettings.orangeCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Client ID' }}">
+            <label class="form-label">Client Secret Orange</label>
+            <input class="form-control" type="password" [(ngModel)]="integrationSettings.orangeClientSecret" autocomplete="new-password" placeholder="{{ integrationSettings.orangeCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Client Secret' }}">
+            <small class="text-success" *ngIf="integrationSettings.orangeCredentialsConfigured">Identifiants configurés</small>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="p-3 rounded-4 border h-100">
+            <h6 class="fw-bold"><i class="bi bi-whatsapp text-success me-1"></i> WhatsApp Cloud API</h6>
+            <label class="form-label">ID du numéro de téléphone</label>
+            <input class="form-control mb-2" [(ngModel)]="integrationSettings.whatsappPhoneNumberId">
+            <label class="form-label">Jeton d’accès permanent</label>
+            <input class="form-control mb-2" type="password" [(ngModel)]="integrationSettings.whatsappAccessToken" autocomplete="new-password" placeholder="{{ integrationSettings.whatsappCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Jeton Meta' }}">
+            <label class="form-label">URL Graph API</label>
+            <input class="form-control" [(ngModel)]="integrationSettings.whatsappApiUrl" placeholder="https://graph.facebook.com/v19.0">
+            <small class="text-success" *ngIf="integrationSettings.whatsappCredentialsConfigured">Jeton configuré</small>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="p-3 rounded-4 border h-100">
+            <h6 class="fw-bold"><i class="bi bi-envelope text-primary me-1"></i> SMTP e-mail</h6>
+            <label class="form-label">Serveur SMTP</label>
+            <input class="form-control mb-2" [(ngModel)]="integrationSettings.smtpHost" placeholder="smtp.exemple.com">
+            <div class="row g-2">
+              <div class="col-4"><label class="form-label">Port</label><input class="form-control mb-2" type="number" [(ngModel)]="integrationSettings.smtpPort"></div>
+              <div class="col-8"><label class="form-label">Adresse expéditeur</label><input class="form-control mb-2" type="email" [(ngModel)]="integrationSettings.smtpFrom"></div>
+            </div>
+            <label class="form-label">Nom d’utilisateur</label>
+            <input class="form-control mb-2" [(ngModel)]="integrationSettings.smtpUsername" autocomplete="off">
+            <label class="form-label">Mot de passe SMTP</label>
+            <input class="form-control mb-2" type="password" [(ngModel)]="integrationSettings.smtpPassword" autocomplete="new-password" placeholder="{{ integrationSettings.smtpPasswordConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Mot de passe SMTP' }}">
+            <label class="form-check"><input class="form-check-input" type="checkbox" [(ngModel)]="integrationSettings.smtpStartTls"> Utiliser STARTTLS</label>
+            <small class="text-success" *ngIf="integrationSettings.smtpPasswordConfigured">Mot de passe configuré</small>
+          </div>
+        </div>
+      </div>
+      <button class="btn-atlas mt-4" (click)="saveIntegrations()" [disabled]="!selectedCompanyId">
+        <i class="bi bi-shield-check"></i> Enregistrer les intégrations
+      </button>
     </section>
   </div>
 </div>

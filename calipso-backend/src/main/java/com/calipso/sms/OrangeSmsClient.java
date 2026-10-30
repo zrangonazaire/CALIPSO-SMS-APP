@@ -39,6 +39,35 @@ public class OrangeSmsClient {
     private final OrangeSmsProperties properties;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private final Map<String, CompanyToken> companyTokens = new java.util.HashMap<>();
+    private record CompanyToken(String value, Instant expiresAt) { }
+
+    private synchronized String companyAccessToken(String clientId, String clientSecret, boolean refresh)
+            throws IOException, InterruptedException {
+        String basic = Base64.getEncoder().encodeToString((clientId.trim() + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
+        String cacheKey;
+        try {
+            cacheKey = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(basic.getBytes(StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
+        CompanyToken cached = companyTokens.get(cacheKey);
+        if (!refresh && cached != null && Instant.now().isBefore(cached.expiresAt())) return cached.value();
+        companyTokens.remove(cacheKey);
+        HttpRequest request = HttpRequest.newBuilder(URI.create(properties.tokenUrl()))
+                .timeout(Duration.ofSeconds(properties.requestTimeoutSeconds()))
+                .header("Authorization", "Basic " + basic)
+                .header("Content-Type", FORM_URLENCODED).header("Accept", APPLICATION_JSON)
+                .POST(HttpRequest.BodyPublishers.ofString(CLIENT_CREDENTIALS_BODY)).build();
+        var response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) throw new IOException("Authentification Orange refusée : HTTP " + response.statusCode());
+        JsonNode body = objectMapper.readTree(response.body());
+        String token = body.path("access_token").asText("");
+        if (token.isBlank()) throw new IOException("Orange n’a pas retourné de jeton d’accès.");
+        companyTokens.put(cacheKey, new CompanyToken(token, Instant.now().plusSeconds(
+                Math.max(0, body.path("expires_in").asLong(3600) - TOKEN_EXPIRY_SAFETY_SECONDS))));
+        return token;
+    }
+
     private String accessToken;
     private Instant tokenExpiresAt = Instant.MIN;
     private String deliveryReceiptSubscriptionResourceUrl;
@@ -64,7 +93,7 @@ public class OrangeSmsClient {
             String senderAddress = configuredSenderAddress();
             String recipientAddress = normalizeRecipientPhone(recipientPhone);
 
-            if (!recipientAddress.startsWith("+")) {
+            if (!recipientAddress.matches("\\+225[0-9]{10}")) {
                 return SmsDeliveryResult.failed(
                         0,
                         "Numero destinataire invalide apres normalisation: " + recipientAddress
@@ -147,6 +176,58 @@ public class OrangeSmsClient {
         } catch (Exception exception) {
             log.error("[Orange SMS] Erreur pendant l'envoi SMS", exception);
             return SmsDeliveryResult.failed(0, exception.getMessage());
+        }
+    }
+
+    public SmsDeliveryResult sendSmsForCompany(
+            String message,
+            String senderPhone,
+            String recipientPhone,
+            String clientId,
+            String clientSecret,
+            String senderName
+    ) {
+        try {
+            String senderAddress = DEFAULT_ORANGE_CIV_SENDER_ADDRESS;
+            if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {
+                return SmsDeliveryResult.failed(400, "Identifiants Orange incomplets.");
+            }
+            if (senderName != null && !senderName.isBlank() && !senderName.trim().matches("[A-Za-z0-9 ]{1,11}")) {
+                return SmsDeliveryResult.failed(400, "Nom d’expéditeur Orange invalide.");
+            }
+            String recipientAddress = normalizeRecipientPhone(recipientPhone);
+            if (message == null || message.isBlank() || recipientAddress == null || !recipientAddress.matches("\\+225[0-9]{10}")) {
+                return SmsDeliveryResult.failed(400, "Message ou numéro destinataire SMS invalide.");
+            }
+
+            String token = companyAccessToken(clientId, clientSecret, false);
+
+            Map<String, Object> outboundRequest = new LinkedHashMap<>();
+            outboundRequest.put("address", "tel:" + recipientAddress);
+            outboundRequest.put("senderAddress", "tel:" + senderAddress);
+            if (senderName != null && !senderName.isBlank()) outboundRequest.put("senderName", senderName.trim());
+            outboundRequest.put("outboundSMSTextMessage", Map.of("message", message));
+            String requestBody = objectMapper.writeValueAsString(Map.of("outboundSMSMessageRequest", outboundRequest));
+            HttpResponse<String> response = null;
+            for (int attempt = 0; attempt < 2; attempt++) {
+                HttpRequest sendRequest = HttpRequest.newBuilder(URI.create(buildOutboundUrl(senderAddress)))
+                        .timeout(Duration.ofSeconds(properties.requestTimeoutSeconds()))
+                        .header("Authorization", "Bearer " + token)
+                        .header("Content-Type", APPLICATION_JSON).header("Accept", APPLICATION_JSON)
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8)).build();
+                response = httpClient().send(sendRequest, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() != 401 || attempt == 1) break;
+                token = companyAccessToken(clientId, clientSecret, true);
+            }
+            if (response.statusCode() == 201) {
+                String resourceUrl = extractProviderResourceUrl(response);
+                return SmsDeliveryResult.sent(response.statusCode(), response.body(), resourceUrl,
+                        extractProviderResourceId(resourceUrl), null);
+            }
+            return SmsDeliveryResult.failed(response.statusCode(), response.body());
+        } catch (Exception exception) {
+            log.error("[Orange SMS] Échec d’envoi avec les identifiants propres à l’entreprise.", exception);
+            return SmsDeliveryResult.failed(0, "Échec de l’envoi auprès du fournisseur Orange.");
         }
     }
 

@@ -6,10 +6,20 @@ calipso:
   security:
     platform-admin-user-ids: ${CALIPSO_PLATFORM_ADMIN_USER_IDS:}
     payment-webhook-secret: ${CALIPSO_PAYMENT_WEBHOOK_SECRET:}
+    bootstrap:
+      username: ${CALIPSO_SECURITY_BOOTSTRAP_USERNAME:}
+      password: ${CALIPSO_SECURITY_BOOTSTRAP_PASSWORD:}
+      email: ${CALIPSO_SECURITY_BOOTSTRAP_EMAIL:admin@calipso.ci}
+      full-name: ${CALIPSO_SECURITY_BOOTSTRAP_FULL_NAME:Administrateur plateforme}
+      company-name: ${CALIPSO_SECURITY_BOOTSTRAP_COMPANY_NAME:Calipso Platform}
+  integrations:
+    encryption-key: ${CALIPSO_INTEGRATIONS_ENCRYPTION_KEY:}
 
 spring:
   config:
     import:
+      - "optional:file:./calipso.local.properties"
+      - "optional:file:./calipso-backend/calipso.local.properties"
       - "optional:file:./orange-sms.local.properties"
       - "optional:file:./calipso-backend/orange-sms.local.properties"
 
@@ -66,4 +76,3 @@ payment:
       return-url: ${CINETPAY_RETURN_URL:http://localhost:4200/subscription}
     wave:
       api-key: ${WAVE_API_KEY:}
-

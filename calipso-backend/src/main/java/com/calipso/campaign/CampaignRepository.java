@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import com.calipso.statistics.StatisticsPeriod;
 
 public interface CampaignRepository extends JpaRepository<Campaign, Long> {
+    long countByCompanyId(Long companyId);
 
     List<Campaign> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
 

@@ -15,6 +15,60 @@ export interface Company {
   createdAt?: string;
 }
 
+export interface CompanyIntegrationSettings {
+  companyId: number;
+  smsSenderAddress?: string;
+  orangeSenderName?: string;
+  orangeCredentialsConfigured: boolean;
+  orangeClientId?: string;
+  orangeClientSecret?: string;
+  whatsappPhoneNumberId?: string;
+  whatsappApiUrl?: string;
+  whatsappCredentialsConfigured: boolean;
+  whatsappAccessToken?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpFrom?: string;
+  smtpUsername?: string;
+  smtpPassword?: string;
+  smtpPasswordConfigured: boolean;
+  smtpStartTls: boolean;
+}
+
+export interface PlatformCompanySummary {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  active: boolean;
+  smsBalance: number;
+  totalMessages: number;
+  acceptedMessages: number;
+  deliveredMessages: number;
+  failedMessages: number;
+  pendingMessages: number;
+  consumedSegments: number;
+  activeUsers: number;
+  campaigns: number;
+  subscriptionPlan?: string;
+  subscriptionStatus: string;
+  subscriptionExpiresAt?: string;
+}
+
+export interface PlatformOverview {
+  companyCount: number;
+  activeCompanies: number;
+  suspendedCompanies: number;
+  remainingSmsCredits: number;
+  messageCount: number;
+  sentMessages: number;
+  deliveredMessages: number;
+  failedMessages: number;
+  pendingMessages: number;
+  activeSubscriptions: number;
+  companies: PlatformCompanySummary[];
+}
+
 export type CompanyUserRole = 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'VIEWER';
 
 export interface CompanyUser {

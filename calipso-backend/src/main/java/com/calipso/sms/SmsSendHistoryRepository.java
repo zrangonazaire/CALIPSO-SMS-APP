@@ -8,6 +8,28 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface SmsSendHistoryRepository extends JpaRepository<SmsSendHistory, Long> {
+    @Query("""
+            select h.company.id as companyId,
+                   count(h) as totalMessages,
+                   sum(case when h.status in (com.calipso.recipient.RecipientStatus.SENT, com.calipso.recipient.RecipientStatus.DELIVERED) then 1 else 0 end) as acceptedMessages,
+                   sum(case when h.status = com.calipso.recipient.RecipientStatus.DELIVERED then 1 else 0 end) as deliveredMessages,
+                   sum(case when h.status = com.calipso.recipient.RecipientStatus.FAILED then 1 else 0 end) as failedMessages,
+                   sum(case when h.status in (com.calipso.recipient.RecipientStatus.PENDING, com.calipso.recipient.RecipientStatus.VALID) then 1 else 0 end) as pendingMessages,
+                   coalesce(sum(h.segmentCount), 0) as consumedSegments
+            from SmsSendHistory h
+            group by h.company.id
+            """)
+    List<CompanyMessageTotals> summarizeByCompany();
+
+    interface CompanyMessageTotals {
+        Long getCompanyId();
+        Long getTotalMessages();
+        Long getAcceptedMessages();
+        Long getDeliveredMessages();
+        Long getFailedMessages();
+        Long getPendingMessages();
+        Long getConsumedSegments();
+    }
 
     List<SmsSendHistory> findByCompanyIdOrderBySentAtDesc(Long companyId);
 
