@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long> {
     List<WalletTransaction> findByCompanyIdOrderByCreatedAtDesc(Long companyId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     Optional<WalletTransaction> findByReference(String reference);
 }

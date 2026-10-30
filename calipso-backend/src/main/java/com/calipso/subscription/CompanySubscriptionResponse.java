@@ -11,7 +11,9 @@ public record CompanySubscriptionResponse(
         Integer minRechargeUnits,
         SubscriptionStatus status,
         LocalDateTime startedAt,
-        LocalDateTime expiresAt
+        LocalDateTime expiresAt,
+        Integer durationMonths,
+        Integer packagePrice
 ) {
     public static CompanySubscriptionResponse from(CompanySubscription subscription) {
         if (subscription == null) {
@@ -28,7 +30,7 @@ public record CompanySubscriptionResponse(
                 plan.getMinRechargeUnits(),
                 subscription.getStatus(),
                 subscription.getStartedAt(),
-                subscription.getExpiresAt()
+                subscription.getExpiresAt(), plan.getDurationMonths(), plan.getPackagePrice()
         );
     }
 }

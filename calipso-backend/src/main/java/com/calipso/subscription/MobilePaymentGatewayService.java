@@ -46,6 +46,9 @@ public class MobilePaymentGatewayService {
     @Value("${payment.gateway.wave.api-key:}")
     private String waveApiKey;
 
+    @Value("${payment.gateway.allow-local-simulation:false}")
+    private boolean allowLocalSimulation;
+
     public record PaymentChargeResult(
             String reference,
             PaymentMethod paymentMethod,
@@ -87,7 +90,8 @@ public class MobilePaymentGatewayService {
                         description
                 );
             } catch (Exception e) {
-                log.warn("[MobilePayment] Bascule sur validation directe Calipso Pay suite à erreur CinetPay: {}", e.getMessage());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "Le prestataire CinetPay n’a pas confirmé la création du paiement. Aucun forfait activé.");
             }
         }
 
@@ -96,10 +100,15 @@ public class MobilePaymentGatewayService {
             try {
                 return initiateWaveCheckout(reference, amountFcfa, normalizedPhone, description);
             } catch (Exception e) {
-                log.warn("[MobilePayment] Bascule sur validation directe Calipso Pay suite à erreur Wave API: {}", e.getMessage());
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "Le prestataire Wave n’a pas confirmé la création du paiement. Aucun forfait activé.");
             }
         }
 
+        if (!allowLocalSimulation) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Aucun prestataire de paiement disponible pour ce moyen de paiement. Contactez l’administrateur pour configurer les encaissements.");
+        }
         String providerName = (configuredProvider == null || configuredProvider.isBlank())
                 ? "CALIPSO_PAY_CI"
                 : configuredProvider;
@@ -204,17 +213,8 @@ public class MobilePaymentGatewayService {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         JsonNode root = objectMapper.readTree(response.body());
-        String paymentUrl = root.path("data").path("payment_url").asText(null);
-
-        return new PaymentChargeResult(
-                reference,
-                method,
-                PaymentStatus.COMPLETED,
-                normalizedPhone,
-                "CINETPAY_CI",
-                paymentUrl,
-                root.path("message").asText("Paiement CinetPay initié")
-        );
+        return pendingCheckout(response.statusCode(), root.path("data").path("payment_url").asText(null),
+                reference, method, normalizedPhone, "CINETPAY_CI", "Paiement CinetPay initié");
     }
 
     private PaymentChargeResult initiateWaveCheckout(
@@ -240,16 +240,15 @@ public class MobilePaymentGatewayService {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         JsonNode root = objectMapper.readTree(response.body());
-        String waveLaunchUrl = root.path("wave_launch_url").asText(null);
+        return pendingCheckout(response.statusCode(), root.path("wave_launch_url").asText(null),
+                reference, PaymentMethod.WAVE_CI, normalizedPhone, "WAVE_BUSINESS_CI", description);
+    }
 
-        return new PaymentChargeResult(
-                reference,
-                PaymentMethod.WAVE_CI,
-                PaymentStatus.COMPLETED,
-                normalizedPhone,
-                "WAVE_BUSINESS_CI",
-                waveLaunchUrl,
-                description
-        );
+    PaymentChargeResult pendingCheckout(int httpStatus, String url, String reference, PaymentMethod method,
+            String phone, String provider, String message) {
+        if (httpStatus < 200 || httpStatus >= 300 || url == null || !url.startsWith("https://")) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Le prestataire n’a pas créé de paiement valide.");
+        }
+        return new PaymentChargeResult(reference, method, PaymentStatus.PENDING, phone, provider, url, message);
     }
 }

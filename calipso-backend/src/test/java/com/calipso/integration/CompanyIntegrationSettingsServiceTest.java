@@ -54,6 +54,53 @@ class CompanyIntegrationSettingsServiceTest {
     }
 
     @Test
+    void preservesSecretsWhenSavingBlankFieldsAndReadsBackTheSenderName() {
+        ReflectionTestUtils.setField(service, "encryptionKey", Base64.getEncoder().encodeToString(new byte[32]));
+        var company = Company.builder().id(8L).name("MAGISER").build();
+        when(companyRepository.findById(8L)).thenReturn(Optional.of(company));
+        var persisted = new AtomicReference<CompanyIntegrationSettings>();
+        when(settingsRepository.findByCompanyId(8L)).thenAnswer(invocation -> Optional.ofNullable(persisted.get()));
+        when(settingsRepository.save(any())).thenAnswer(invocation -> {
+            var value = invocation.<CompanyIntegrationSettings>getArgument(0);
+            persisted.set(value);
+            return value;
+        });
+        service.update(8L, new CompanyIntegrationSettingsRequest(
+                "+2250000", "orange-id", "orange-secret", "wa-phone", "wa-secret", null,
+                "smtp.example.ci", 587, "sender@example.ci", "smtp-user", "smtp-secret", true, null));
+        String encryptedSecret = persisted.get().getOrangeClientSecretEncrypted();
+
+        service.update(8L, new CompanyIntegrationSettingsRequest(
+                "+2250000", "", "  ", "wa-phone", "", null,
+                "smtp.example.ci", 587, "sender@example.ci", "smtp-user", null, true, "MAGISER"));
+
+        var reloaded = service.get(8L);
+        assertEquals("MAGISER", reloaded.orangeSenderName());
+        assertTrue(reloaded.orangeCredentialsConfigured());
+        assertTrue(reloaded.whatsappCredentialsConfigured());
+        assertTrue(reloaded.smtpPasswordConfigured());
+        assertEquals(encryptedSecret, persisted.get().getOrangeClientSecretEncrypted());
+        var decrypted = service.findDecrypted(8L);
+        assertEquals("orange-id", decrypted.orangeClientId());
+        assertEquals("orange-secret", decrypted.orangeClientSecret());
+        assertEquals("wa-secret", decrypted.whatsappAccessToken());
+        assertEquals("smtp-secret", decrypted.smtpPassword());
+    }
+
+    @Test
+    void savesPort465AsImplicitTlsWithoutStartTls() {
+        var company = Company.builder().id(8L).name("MAGISER").build();
+        when(companyRepository.findById(8L)).thenReturn(Optional.of(company));
+        when(settingsRepository.findByCompanyId(8L)).thenReturn(Optional.empty());
+        when(settingsRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var saved = service.update(8L, new CompanyIntegrationSettingsRequest(
+                null, null, null, null, null, null, "mail.example.test", 465,
+                "sender@example.test", "smtp-user", null, true, null));
+        assertEquals(465, saved.smtpPort());
+        assertFalse(saved.smtpStartTls());
+    }
+
+    @Test
     void rejectsNonMetaWhatsappEndpoints() {
         var company = Company.builder().id(7L).name("Entreprise").build();
         when(companyRepository.findById(7L)).thenReturn(Optional.of(company));

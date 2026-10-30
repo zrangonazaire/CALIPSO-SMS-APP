@@ -1,0 +1,7 @@
+.env.production
+deploy/.secrets/
+deploy/artifacts/
+deploy/backups/
+deploy/.smoke/
+deploy/*.log
+hs_err_pid*.log

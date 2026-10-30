@@ -32,6 +32,12 @@ public class SubscriptionPlan {
     @Column(nullable = false)
     private Integer minRechargeUnits;
 
+    private String serviceTier;
+    private Integer durationMonths;
+    private Integer packagePrice;
+    private Integer includedWhatsapp;
+    private Integer includedEmail;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;

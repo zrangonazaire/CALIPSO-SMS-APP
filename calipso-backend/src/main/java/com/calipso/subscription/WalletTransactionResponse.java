@@ -22,7 +22,10 @@ public record WalletTransactionResponse(
         String providerName,
         String checkoutUrl,
         String reason,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        com.calipso.campaign.CampaignChannel channel,
+        Integer whatsappUnits,
+        Integer emailUnits
 ) {
     public static WalletTransactionResponse from(WalletTransaction transaction) {
         return new WalletTransactionResponse(
@@ -31,7 +34,7 @@ public record WalletTransactionResponse(
                 transaction.getCompany().getName(),
                 transaction.getSubscription() == null ? null : transaction.getSubscription().getId(),
                 transaction.getSubscription() == null || transaction.getSubscription().getPlan() == null
-                        ? null
+                        ? transaction.getPurchasedPlan() == null ? null : transaction.getPurchasedPlan().getName()
                         : transaction.getSubscription().getPlan().getName(),
                 transaction.getType(),
                 transaction.getSmsUnits(),
@@ -45,7 +48,7 @@ public record WalletTransactionResponse(
                 transaction.getProviderName(),
                 transaction.getCheckoutUrl(),
                 transaction.getReason(),
-                transaction.getCreatedAt()
+                transaction.getCreatedAt(), transaction.getChannel(), transaction.getWhatsappUnits(), transaction.getEmailUnits()
         );
     }
 }

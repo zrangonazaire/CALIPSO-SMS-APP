@@ -66,7 +66,7 @@ public class CompanyIntegrationSettingsService {
         settings.setSmtpPort(request.smtpPort());
         settings.setSmtpFrom(clean(request.smtpFrom()));
         settings.setSmtpUsername(clean(request.smtpUsername()));
-        settings.setSmtpStartTls(Boolean.TRUE.equals(request.smtpStartTls()));
+        settings.setSmtpStartTls(!Integer.valueOf(465).equals(request.smtpPort()) && Boolean.TRUE.equals(request.smtpStartTls()));
 
         settings.setOrangeClientIdEncrypted(updateSecret(settings.getOrangeClientIdEncrypted(), request.orangeClientId()));
         settings.setOrangeClientSecretEncrypted(updateSecret(settings.getOrangeClientSecretEncrypted(), request.orangeClientSecret()));
@@ -98,8 +98,7 @@ public class CompanyIntegrationSettingsService {
     }
 
     private String updateSecret(String current, String requested) {
-        if (requested == null) return current;
-        if (requested.isBlank()) return null;
+        if (requested == null || requested.isBlank()) return current;
         return encrypt(requested);
     }
 

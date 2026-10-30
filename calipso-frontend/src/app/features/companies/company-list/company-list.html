@@ -345,6 +345,7 @@
       <div class="mb-4">
         <label for="integration-company" class="form-label">Entreprise à configurer</label>
         <select id="integration-company" class="form-select mb-3"
+          [disabled]="integrationSaving()"
           [ngModel]="selectedCompanyId" (ngModelChange)="selectCompany($event)">
           @for (company of companies; track company.id) {
             <option [ngValue]="company.id">{{ company.name }}</option>
@@ -353,6 +354,11 @@
         <h5 class="fw-bold mb-1">Canaux de {{ selectedCompany?.name || 'l’entreprise sélectionnée' }}</h5>
         <p class="text-muted small mb-0">Configurez les comptes Orange SMS, WhatsApp et e-mail de cette entreprise. Les identifiants sont protégés ; laissez les champs secrets non renseignés pour conserver ceux déjà enregistrés.</p>
       </div>
+      @if (integrationLoading()) {
+        <p role="status">Chargement de la configuration enregistrée…</p>
+      }
+      <fieldset class="border-0 p-0 m-0" [disabled]="!integrationReady() || integrationLoading() || integrationSaving()">
+      <legend class="visually-hidden">Configuration des canaux de l’entreprise</legend>
       <div class="row g-4">
         <div class="col-lg-4">
           <div class="p-3 rounded-4 border h-100">
@@ -363,12 +369,13 @@
             <label class="form-label" for="orange-sender-name">Nom d’expéditeur approuvé par Orange</label>
             <input id="orange-sender-name" class="form-control mb-2" [(ngModel)]="integrationSettings.orangeSenderName" maxlength="11" placeholder="MAGISER">
             <p class="small text-muted">11 lettres, chiffres ou espaces maximum. Laissez vide pour utiliser le nom par défaut de votre compte Orange.</p>
-            <a href="https://developer.orange.com/apis/sms-ci/getting-started" target="_blank" rel="noopener noreferrer">Guide officiel Orange Côte d’Ivoire</a>
-            <label class="form-label">Client ID Orange</label>
-            <input class="form-control mb-2" [(ngModel)]="integrationSettings.orangeClientId" autocomplete="off" placeholder="{{ integrationSettings.orangeCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Client ID' }}">
-            <label class="form-label">Client Secret Orange</label>
-            <input class="form-control" type="password" [(ngModel)]="integrationSettings.orangeClientSecret" autocomplete="new-password" placeholder="{{ integrationSettings.orangeCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Client Secret' }}">
-            <small class="text-success" *ngIf="integrationSettings.orangeCredentialsConfigured">Identifiants configurés</small>
+            <a class="d-block mb-3" href="https://developer.orange.com/apis/sms-ci/getting-started" target="_blank" rel="noopener noreferrer">Guide officiel Orange Côte d’Ivoire</a>
+            <label class="form-label" for="orange-client-id">Client ID Orange</label>
+            <input id="orange-client-id" class="form-control mb-2" [(ngModel)]="integrationSettings.orangeClientId" autocomplete="off" placeholder="{{ integrationSettings.orangeCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Client ID' }}">
+            <label class="form-label" for="orange-client-secret">Client Secret Orange</label>
+            <input id="orange-client-secret" class="form-control" type="password" [(ngModel)]="integrationSettings.orangeClientSecret" autocomplete="new-password" placeholder="{{ integrationSettings.orangeCredentialsConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Client Secret' }}">
+            <app-orange-connection [companyId]="selectedCompanyId" [companyName]="selectedCompany?.name || ''"
+              [configured]="integrationSettings.orangeCredentialsConfigured" [clientId]="integrationSettings.orangeClientId || ''" [clientSecret]="integrationSettings.orangeClientSecret || ''" />
           </div>
         </div>
         <div class="col-lg-4">
@@ -386,24 +393,37 @@
         <div class="col-lg-4">
           <div class="p-3 rounded-4 border h-100">
             <h6 class="fw-bold"><i class="bi bi-envelope text-primary me-1"></i> SMTP e-mail</h6>
-            <label class="form-label">Serveur SMTP</label>
-            <input class="form-control mb-2" [(ngModel)]="integrationSettings.smtpHost" placeholder="smtp.exemple.com">
+            <label class="form-label" for="smtp-host">Serveur SMTP</label>
+            <input id="smtp-host" class="form-control mb-2" [(ngModel)]="integrationSettings.smtpHost" placeholder="smtp.exemple.com">
             <div class="row g-2">
-              <div class="col-4"><label class="form-label">Port</label><input class="form-control mb-2" type="number" [(ngModel)]="integrationSettings.smtpPort"></div>
-              <div class="col-8"><label class="form-label">Adresse expéditeur</label><input class="form-control mb-2" type="email" [(ngModel)]="integrationSettings.smtpFrom"></div>
+              <div class="col-4"><label class="form-label" for="smtp-port">Port</label><input id="smtp-port" class="form-control mb-2" type="number" [(ngModel)]="integrationSettings.smtpPort"></div>
+              <div class="col-8"><label class="form-label" for="smtp-from">Adresse expéditeur</label><input id="smtp-from" class="form-control mb-2" type="email" [(ngModel)]="integrationSettings.smtpFrom"></div>
             </div>
-            <label class="form-label">Nom d’utilisateur</label>
-            <input class="form-control mb-2" [(ngModel)]="integrationSettings.smtpUsername" autocomplete="off">
-            <label class="form-label">Mot de passe SMTP</label>
-            <input class="form-control mb-2" type="password" [(ngModel)]="integrationSettings.smtpPassword" autocomplete="new-password" placeholder="{{ integrationSettings.smtpPasswordConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Mot de passe SMTP' }}">
-            <label class="form-check"><input class="form-check-input" type="checkbox" [(ngModel)]="integrationSettings.smtpStartTls"> Utiliser STARTTLS</label>
+            <label class="form-label" for="smtp-user">Nom d’utilisateur</label>
+            <input id="smtp-user" class="form-control mb-2" [(ngModel)]="integrationSettings.smtpUsername" autocomplete="off">
+            <label class="form-label" for="smtp-password">Mot de passe SMTP</label>
+            <input id="smtp-password" class="form-control mb-2" type="password" [(ngModel)]="integrationSettings.smtpPassword" autocomplete="new-password" placeholder="{{ integrationSettings.smtpPasswordConfigured ? 'Déjà configuré — saisir pour remplacer' : 'Mot de passe SMTP' }}">
+            <label class="form-check"><input class="form-check-input" type="checkbox" [disabled]="integrationSettings.smtpPort === 465" [ngModel]="integrationSettings.smtpPort === 465 ? false : integrationSettings.smtpStartTls" (ngModelChange)="integrationSettings.smtpStartTls = $event"> Utiliser STARTTLS</label>
+            @if (integrationSettings.smtpPort === 465) {
+              <p class="small text-muted">SSL/TLS activé automatiquement sur le port 465.</p>
+            }
             <small class="text-success" *ngIf="integrationSettings.smtpPasswordConfigured">Mot de passe configuré</small>
+            <p class="small text-muted mt-3">Enregistrez vos paramètres, puis vérifiez la connexion et l’authentification. Ce test n’envoie aucun e-mail.</p>
+            <button type="button" class="btn btn-outline-primary" (click)="testSavedSmtp()" [disabled]="smtpTesting() || !integrationReady() || integrationSaving() || integrationLoading()">
+              {{ smtpTesting() ? 'Vérification SMTP…' : 'Tester le SMTP enregistré' }}
+            </button>
+            @if (smtpResult(); as result) {
+              <div class="alert mt-3" [class.alert-success]="result.connected" [class.alert-danger]="!result.connected" role="status">
+                {{ result.message }} @if (result.security) { <div>Connexion : {{ result.security }}</div> }
+              </div>
+            }
           </div>
         </div>
       </div>
-      <button class="btn-atlas mt-4" (click)="saveIntegrations()" [disabled]="!selectedCompanyId">
-        <i class="bi bi-shield-check"></i> Enregistrer les intégrations
+      <button class="btn-atlas mt-4" (click)="saveIntegrations()" [disabled]="!selectedCompanyId || !integrationReady() || integrationLoading() || integrationSaving()">
+        <i class="bi bi-shield-check"></i> {{ integrationSaving() ? 'Enregistrement et vérification…' : 'Enregistrer les intégrations pour ' + selectedCompany?.name }}
       </button>
+      </fieldset>
     </section>
   </div>
 </div>

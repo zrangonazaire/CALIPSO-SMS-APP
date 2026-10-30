@@ -63,7 +63,7 @@ class OrangeSmsClientTest {
         var orange = mock(OrangeSmsClient.class);
         when(orange.normalizePhone("0701020304")).thenReturn("+2250701020304");
         when(orange.sendSms("Bonjour", null, "+2250701020304")).thenReturn(SmsDeliveryResult.failed(403, "Forfait expiré"));
-        var gateway = new MultichannelGatewayService(orange, mock(com.calipso.integration.CompanyIntegrationSettingsService.class));
+        var gateway = new MultichannelGatewayService(orange, mock(com.calipso.integration.CompanyIntegrationSettingsService.class), mock(SmtpClient.class));
         var result = gateway.dispatch(com.calipso.campaign.CampaignChannel.SMS, "Bonjour", null, null, "0701020304", null, null, null);
         assertFalse(result.sent());
         assertEquals(403, result.statusCode());

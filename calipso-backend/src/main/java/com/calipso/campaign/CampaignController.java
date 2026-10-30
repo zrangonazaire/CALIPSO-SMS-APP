@@ -192,7 +192,7 @@ public class CampaignController {
         int totalUnits = validRecipients.stream()
                 .mapToInt(recipient -> recipient.getSegmentCount() == null ? 1 : recipient.getSegmentCount())
                 .sum();
-        subscriptionService.validateSmsBalance(campaign.getCompany(), totalUnits);
+        subscriptionService.validateBalance(campaign.getCompany(), channel, totalUnits);
 
         campaign.setStatus(CampaignStatus.SENDING);
         campaignRepository.save(campaign);
@@ -254,8 +254,9 @@ public class CampaignController {
                     .build());
         }
 
-        subscriptionService.debitSms(
+        subscriptionService.debitMessages(
                 campaign.getCompany(),
+                channel,
                 sentUnits,
                 "Campagne " + channel.name() + " : " + campaign.getName()
         );

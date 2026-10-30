@@ -1,0 +1,111 @@
+<div class="orange-auth">
+  <h6>Authentification automatique</h6>
+  <p>
+    Le Client ID et le Client Secret permettent au serveur d’obtenir le jeton Orange et de le
+    renouveler automatiquement avant son expiration.
+  </p>
+  <label class="form-label" [for]="'orange-bearer-' + companyId()"
+    >Authorization pour l’envoi des SMS</label
+  >
+  <input
+    class="form-control"
+    [id]="'orange-bearer-' + companyId()"
+    readonly
+    value="Bearer — généré automatiquement"
+    aria-describedby="orange-bearer-help"
+  />
+  <p id="orange-bearer-help" class="mt-2">
+    Aucune saisie du Bearer n’est nécessaire. Les jetons restent sur le serveur.
+  </p>
+  <p [class.configured]="configured()">
+    <strong>{{
+      configured()
+        ? 'Identifiants enregistrés et chiffrés pour cette entreprise.'
+        : 'Aucun identifiant Orange complet enregistré pour cette entreprise.'
+    }}</strong>
+  </p>
+  <button
+    type="button"
+    class="btn btn-outline-primary mt-2"
+    (click)="test()"
+    [disabled]="testing() || !companyId()"
+  >
+    {{ testing() ? 'Vérification en cours…' : 'Tester la connexion Orange' }}
+  </button>
+  <p class="mt-2">
+    Test pour <strong>{{ companyName() }}</strong> : authentification et lecture du forfait, sans
+    envoi de SMS. Les valeurs saisies sont testées sans être enregistrées ; laissez les deux champs
+    vides pour tester les identifiants déjà enregistrés.
+  </p>
+  @if (error()) {
+    <div class="alert alert-danger mt-3" role="alert">{{ error() }}</div>
+  }
+  @if (result(); as status) {
+    <div
+      class="alert mt-3"
+      [class.alert-success]="status.contractsAccessible && status.availableUnits > 0"
+      [class.alert-warning]="!status.contractsAccessible || status.availableUnits === 0"
+      role="status"
+    >
+      <strong>{{ status.message }}</strong>
+      <div>
+        Token {{ status.tokenType }} obtenu. Expiration :
+        {{ status.tokenExpiresAt | date: 'dd/MM/yyyy HH:mm:ss' }}.
+      </div>
+      @if (status.contractsAccessible) {
+        <div>{{ status.availableUnits }} SMS disponibles sur les contrats actifs non expirés.</div>
+        @for (contract of status.contracts; track $index) {
+          <div>
+            {{ contract.offerName || 'Forfait Orange' }} :
+            {{ contract.status || 'Statut non précisé' }} · expiration
+            {{
+              contract.expirationDate
+                ? (contract.expirationDate | date: 'dd/MM/yyyy')
+                : 'non précisée'
+            }}
+          </div>
+        }
+      }
+    </div>
+  }
+  <details class="mt-3">
+    <summary>Paramètres techniques Orange</summary>
+    @if (configuration(); as config) {
+      <label class="form-label mt-2" [for]="'orange-token-url-' + companyId()">Token URL</label
+      ><input
+        class="form-control form-control-sm"
+        [id]="'orange-token-url-' + companyId()"
+        [value]="config.tokenUrl"
+        readonly
+      />
+      <p class="mt-1">
+        POST · Basic généré avec Client ID et Client Secret · grant_type=client_credentials.
+      </p>
+      <label class="form-label mt-2" [for]="'orange-send-url-' + companyId()"
+        >URL d’envoi SMS Côte d’Ivoire</label
+      ><input
+        class="form-control form-control-sm"
+        [id]="'orange-send-url-' + companyId()"
+        [value]="config.messagingUrl"
+        readonly
+      />
+      <label class="form-label mt-2" [for]="'orange-contract-url-' + companyId()"
+        >URL de consultation des contrats</label
+      ><input
+        class="form-control form-control-sm"
+        [id]="'orange-contract-url-' + companyId()"
+        [value]="config.contractsUrl"
+        readonly
+      />
+      <p class="mt-2">
+        Ces URLs officielles sont configurées sur le serveur et utilisées automatiquement.
+      </p>
+    } @else {
+      <p role="status">{{ configurationError() || 'Chargement des paramètres…' }}</p>
+    }
+  </details>
+  <p class="mt-3">
+    Le test ne vérifie pas l’approbation du nom d’expéditeur. Utilisez uniquement un nom autorisé
+    par Orange pour cette application.
+  </p>
+</div>

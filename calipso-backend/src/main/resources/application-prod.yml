@@ -1,0 +1,63 @@
+server:
+  port: 8085
+  forward-headers-strategy: framework
+  shutdown: graceful
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+spring:
+  config:
+    import: "configtree:/run/secrets/"
+  datasource:
+    url: jdbc:postgresql://postgres:5432/calipso
+    username: calipso
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: update
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+calipso:
+  security:
+    public-registration-enabled: false
+    allowed-origins: "https://${CALIPSO_DOMAIN:calipso-sms.pro}"
+    expose-error-details: false
+  integrations:
+    require-company-settings: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+payment:
+  gateway:
+    allow-local-simulation: false
+    cinetpay:
+      notify-url: "https://${CALIPSO_DOMAIN:calipso-sms.pro}/api/v1/subscription/payments/webhook"
+      return-url: "https://${CALIPSO_DOMAIN:calipso-sms.pro}/subscription"
+
+logging:
+  level:
+    com.calipso.sms: WARN
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF

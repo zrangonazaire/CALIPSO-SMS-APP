@@ -50,21 +50,27 @@
   </section>
 
   <section class="auth-form-pane">
-    <div class="auth-card">
-      <div class="auth-mode-tabs" *ngIf="mode !== 'forgot'">
-        <button type="button" [class.active]="mode === 'login'" (click)="switchMode('login')">
+    <div class="mobile-brand" aria-label="Calipso Studio">
+      <span class="logo-box" aria-hidden="true"><i class="bi bi-send-check-fill"></i></span>
+      <span>Calipso Studio<strong>.</strong></span>
+    </div>
+    <div class="auth-card" [attr.aria-busy]="loading">
+      <div class="auth-mode-tabs" role="group" aria-label="Connexion ou inscription" *ngIf="mode !== 'forgot'" [class.single-mode]="!publicRegistrationEnabled()">
+        <button type="button" [class.active]="mode === 'login'" [attr.aria-pressed]="mode === 'login'" [disabled]="loading" (click)="switchMode('login')">
           Connexion
         </button>
-        <button type="button" [class.active]="mode === 'register'" (click)="switchMode('register')">
+        @if (publicRegistrationEnabled()) {
+        <button type="button" [class.active]="mode === 'register'" [attr.aria-pressed]="mode === 'register'" [disabled]="loading" (click)="switchMode('register')">
           Créer un compte gratuit
         </button>
+        }
       </div>
 
       <!-- Alertes -->
-      <div class="alert alert-danger py-2 px-3 small rounded-3" *ngIf="error">
+      <div class="alert alert-danger py-2 px-3 small rounded-3" role="alert" *ngIf="error">
         <i class="bi bi-exclamation-circle me-1"></i> {{ error }}
       </div>
-      <div class="alert alert-success py-2 px-3 small rounded-3" *ngIf="info">
+      <div class="alert alert-success py-2 px-3 small rounded-3" role="status" *ngIf="info">
         <i class="bi bi-check-circle-fill me-1"></i> {{ info }}
       </div>
 
@@ -76,30 +82,37 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Identifiant ou Email</label>
+          <label class="form-label" for="login-username">Identifiant ou e-mail</label>
           <input
+            id="login-username"
             class="form-control"
             name="username"
             autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            required
             [(ngModel)]="form.username"
             placeholder="Votre identifiant ou adresse email">
         </div>
 
         <div class="mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-1">
-            <label class="form-label mb-0">Mot de passe</label>
+          <div class="password-label-row">
+            <label class="form-label mb-0" for="login-password">Mot de passe</label>
             <button
               type="button"
               class="btn-forgot-link"
+              [disabled]="loading"
               (click)="forgotForm.identifier = form.username; switchMode('forgot')">
               Mot de passe oublié ?
             </button>
           </div>
           <input
+            id="login-password"
             class="form-control"
             name="password"
             type="password"
             autocomplete="current-password"
+            required
             [(ngModel)]="form.password"
             placeholder="••••••••">
         </div>
@@ -123,42 +136,51 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Nom de votre entreprise, école ou activité</label>
+          <label class="form-label" for="register-company">Nom de votre entreprise, école ou activité</label>
           <input
+            id="register-company"
             class="form-control"
             name="companyName"
+            autocomplete="organization"
+            required
             [(ngModel)]="setupForm.companyName"
             placeholder="Ex: Boutique Akwaba / Institut Pigier">
         </div>
 
         <div class="row g-2 mb-3">
           <div class="col-sm-6">
-            <label class="form-label">Votre nom complet</label>
-            <input class="form-control" name="fullName" [(ngModel)]="setupForm.fullName" placeholder="Ex: Marc Konan">
+            <label class="form-label" for="register-name">Votre nom complet</label>
+            <input id="register-name" class="form-control" name="fullName" autocomplete="name" required [(ngModel)]="setupForm.fullName" placeholder="Ex. : Marc Konan">
           </div>
           <div class="col-sm-6">
-            <label class="form-label">Email professionnel</label>
-            <input class="form-control" name="email" type="email" [(ngModel)]="setupForm.email" placeholder="contact@domaine.ci">
+            <label class="form-label" for="register-email">E-mail professionnel</label>
+            <input id="register-email" class="form-control" name="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required [(ngModel)]="setupForm.email" placeholder="contact@domaine.ci">
           </div>
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Identifiant de connexion</label>
+          <label class="form-label" for="register-username">Identifiant de connexion</label>
           <input
+            id="register-username"
             class="form-control"
             name="setupUsername"
             autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            required
             [(ngModel)]="setupForm.username"
             placeholder="Ex: marc.konan">
         </div>
 
         <div class="mb-4">
-          <label class="form-label">Mot de passe</label>
+          <label class="form-label" for="register-password">Mot de passe</label>
           <input
+            id="register-password"
             class="form-control"
             name="setupPassword"
             type="password"
             autocomplete="new-password"
+            required
             [(ngModel)]="setupForm.password"
             placeholder="Choisissez un mot de passe sécurisé">
         </div>
@@ -185,32 +207,43 @@
         <!-- Étape 1 : Demander le code -->
         <form *ngIf="forgotStep === 1" (ngSubmit)="requestResetCode()">
           <div class="mb-3">
-            <label class="form-label">Votre identifiant ou adresse email</label>
+            <label class="form-label" for="recovery-identifier">Votre identifiant ou adresse e-mail</label>
             <input
+              id="recovery-identifier"
               class="form-control"
               name="forgotIdentifier"
+              autocomplete="username"
+              autocapitalize="none"
+              spellcheck="false"
+              required
               [(ngModel)]="forgotForm.identifier"
               placeholder="Ex: marc.konan ou contact@societe.ci">
           </div>
 
           <div class="mb-4">
-            <label class="form-label">Comment souhaitez-vous recevoir votre code ?</label>
-            <div class="recovery-channels">
+            <p class="form-label" id="recovery-channel-label">Comment souhaitez-vous recevoir votre code ?</p>
+            <div class="recovery-channels" role="group" aria-labelledby="recovery-channel-label">
               <button
                 type="button"
                 [class.active]="forgotForm.channel === 'EMAIL'"
+                [attr.aria-pressed]="forgotForm.channel === 'EMAIL'"
+                [disabled]="loading"
                 (click)="forgotForm.channel = 'EMAIL'">
                 <i class="bi bi-envelope-fill"></i> Email
               </button>
               <button
                 type="button"
                 [class.active]="forgotForm.channel === 'SMS'"
+                [attr.aria-pressed]="forgotForm.channel === 'SMS'"
+                [disabled]="loading"
                 (click)="forgotForm.channel = 'SMS'">
                 <i class="bi bi-chat-dots-fill"></i> SMS
               </button>
               <button
                 type="button"
                 [class.active]="forgotForm.channel === 'WHATSAPP'"
+                [attr.aria-pressed]="forgotForm.channel === 'WHATSAPP'"
+                [disabled]="loading"
                 (click)="forgotForm.channel = 'WHATSAPP'">
                 <i class="bi bi-whatsapp"></i> WhatsApp
               </button>
@@ -236,22 +269,28 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Code de sécurité à 6 chiffres</label>
+            <label class="form-label" for="recovery-code">Code de sécurité à 6 chiffres</label>
             <input
+              id="recovery-code"
               class="form-control otp-input"
               name="otpCode"
               maxlength="6"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              required
               [(ngModel)]="forgotForm.code"
               placeholder="000000">
           </div>
 
           <div class="mb-4">
-            <label class="form-label">Nouveau mot de passe</label>
+            <label class="form-label" for="recovery-password">Nouveau mot de passe</label>
             <input
+              id="recovery-password"
               class="form-control"
               name="newPassword"
               type="password"
               autocomplete="new-password"
+              required
               [(ngModel)]="forgotForm.newPassword"
               placeholder="Saisissez votre nouveau mot de passe">
           </div>
@@ -265,6 +304,7 @@
         <button
           type="button"
           class="btn-ghost w-100 justify-content-center mt-3"
+          [disabled]="loading"
           (click)="switchMode('login')">
           <i class="bi bi-arrow-left"></i>
           Retour à la connexion

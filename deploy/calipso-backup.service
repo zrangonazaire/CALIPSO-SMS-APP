@@ -1,0 +1,10 @@
+[Unit]
+Description=Sauvegarde PostgreSQL Calipso
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/calipso
+ExecStart=/bin/bash /opt/calipso/deploy/backup.sh
+UMask=0077

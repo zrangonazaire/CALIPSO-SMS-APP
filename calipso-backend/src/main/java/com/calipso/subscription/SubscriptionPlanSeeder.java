@@ -17,10 +17,31 @@ public class SubscriptionPlanSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         migrateLegacySchemaConstraints();
+        // PostgreSQL keeps the original enum CHECK when Hibernate adds enum constants.
+        jdbcTemplate.execute("ALTER TABLE subscription_plans DROP CONSTRAINT IF EXISTS subscription_plans_code_check");
+        String codes = java.util.Arrays.stream(SubscriptionPlanCode.values())
+                .map(code -> "'" + code.name() + "'").collect(java.util.stream.Collectors.joining(","));
+        jdbcTemplate.execute("ALTER TABLE subscription_plans ADD CONSTRAINT subscription_plans_code_check CHECK (code IN (" + codes + "))");
         seed(SubscriptionPlanCode.ESSENTIEL, "Essentiel", 20, 30, 100);
         seed(SubscriptionPlanCode.STANDARD, "Standard", 16, 60, 500);
         seed(SubscriptionPlanCode.AVANCE, "Avance", 12, 120, 1000);
         seed(SubscriptionPlanCode.VOLUME, "Volume", 10, 180, 5000);
+        for (var offer : MultichannelCatalog.OFFERS) {
+            var plan = planRepository.findByCode(offer.code()).orElseGet(SubscriptionPlan::new);
+            plan.setCode(offer.code());
+            plan.setName(offer.name());
+            plan.setServiceTier(offer.tier());
+            plan.setDurationMonths(offer.months());
+            plan.setDurationDays(offer.months() == 12 ? 365 : offer.months() * 30);
+            plan.setPackagePrice(offer.price());
+            plan.setMinRechargeUnits(offer.sms());
+            plan.setIncludedWhatsapp(offer.whatsapp());
+            plan.setIncludedEmail(offer.email());
+            // SMS-only top-ups remain independent of the fixed multichannel package price.
+            plan.setPricePerSms(20);
+            plan.setActive(true);
+            planRepository.save(plan);
+        }
     }
 
     private void migrateLegacySchemaConstraints() {

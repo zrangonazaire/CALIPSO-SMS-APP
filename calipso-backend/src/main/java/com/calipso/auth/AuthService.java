@@ -50,10 +50,12 @@ public class AuthService {
     }
 
     public LoginResponse setupAdmin(SetupAdminRequest request) {
+        access.requirePublicRegistration();
         return createWorkspaceAccount(request);
     }
 
     public LoginResponse register(SetupAdminRequest request) {
+        access.requirePublicRegistration();
         return createWorkspaceAccount(request);
     }
 

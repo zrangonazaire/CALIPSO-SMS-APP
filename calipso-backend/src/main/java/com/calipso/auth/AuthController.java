@@ -17,6 +17,11 @@ public class AuthController {
     private final AuthService authService;
     private final CompanyAccess access;
 
+    @GetMapping("/configuration")
+    public Map<String, Boolean> configuration() {
+        return Map.of("publicRegistrationEnabled", access.isPublicRegistrationEnabled());
+    }
+
     @PostMapping("/login")
     public LoginResponse login(@RequestBody @Valid LoginRequest request) {
         return authService.login(request);

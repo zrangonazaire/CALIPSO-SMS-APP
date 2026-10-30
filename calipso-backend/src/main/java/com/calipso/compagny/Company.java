@@ -39,6 +39,10 @@ public class Company {
     @Builder.Default
     private Integer smsBalance = 0;
 
+    // Null identifies an account still using the historical shared wallet.
+    private Integer whatsappBalance;
+    private Integer emailBalance;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;

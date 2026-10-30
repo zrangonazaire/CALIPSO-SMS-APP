@@ -1,330 +1,95 @@
 <div class="subscription-page">
-  <div class="page-heading">
+  <header class="page-heading">
     <div>
-      <span class="eyebrow"><i class="bi bi-wallet2"></i> Portefeuille Multicanal · Côte d'Ivoire (XOF)</span>
-      <h2 class="page-title mb-1">Crédits, Paliers & Paiement Mobile Money</h2>
-      <p class="text-muted mb-0">
-        Tarification dégressive automatique selon votre volume. Payez en 1 clic par Wave, Orange Money, MTN MoMo, Moov Money ou Carte Djamo.
-      </p>
+      <span class="eyebrow">Communication multicanale · Côte d’Ivoire</span>
+      <h2 class="page-title mb-1">Offres SMS, WhatsApp et e-mail</h2>
+      <p class="text-muted mb-0">Un forfait par entreprise, trois soldes distincts et un prix fixe pour toute la période.</p>
     </div>
+    <button type="button" class="btn-ghost" (click)="refreshBalances()" [disabled]="loading()">Actualiser les soldes</button>
+  </header>
 
-    <div class="wallet-actions">
-      <div class="quick-recharge-pills d-none d-md-flex gap-1">
-        <button
-          type="button"
-          class="btn-ghost btn-sm"
-          [class.active-pill]="rechargeUnits === amt"
-          *ngFor="let amt of quickAmounts"
-          (click)="rechargeUnits = amt">
-          +{{ amt | number:'1.0-0' }}
-        </button>
-      </div>
-      <input
-        class="form-control"
-        type="number"
-        min="100"
-        step="100"
-        [(ngModel)]="rechargeUnits"
-        style="max-width: 135px;"
-        aria-label="Crédits à recharger">
-      <button class="btn-atlas" (click)="openRechargeCheckout()" [disabled]="loading">
-        <i class="bi bi-phone-fill"></i>
-        <span>Payer {{ pricingQuote.totalFcfa | number:'1.0-0' }} FCFA</span>
-      </button>
-    </div>
+  @if (error()) { <div class="alert alert-danger" role="alert">{{ error() }}</div> }
+  @if (success()) { <div class="alert alert-success" role="status">{{ success() }}</div> }
+
+  @if (summary(); as balance) {
+    <section class="balance-panel" aria-label="Soldes disponibles">
+      <div><span class="panel-label">{{ legacyWallet() ? 'Crédits historiques' : 'Crédits SMS' }}</span><strong>{{ balance.smsBalance | number }} </strong><small>{{ legacyWallet() ? 'Ancien portefeuille partagé' : '1 crédit par segment SMS' }}</small></div>
+      <div><span class="panel-label">WhatsApp</span><strong>{{ balance.whatsappBalance == null ? '—' : (balance.whatsappBalance | number) }}</strong><small>messages disponibles</small></div>
+      <div><span class="panel-label">E-mail</span><strong>{{ balance.emailBalance == null ? '—' : (balance.emailBalance | number) }}</strong><small>e-mails disponibles</small></div>
+    </section>
+  }
+  @if (activeSubscription(); as active) {
+    <p class="text-muted">Formule : <strong>{{ active.planName }}</strong> · {{ active.status === 'ACTIVE' ? 'Valide jusqu’au' : 'Expirée / terminée le' }} {{ active.expiresAt | date:'dd/MM/yyyy' }}.</p>
+  }
+
+  <div class="period-options" role="group" aria-label="Durée du forfait">
+    @for (duration of periods; track duration) {
+      <button type="button" class="btn-ghost" [class.selected]="months() === duration" [attr.aria-pressed]="months() === duration" (click)="months.set(duration)">{{ periodLabel(duration) }}</button>
+    }
   </div>
-
-  <!-- Bandeau simulateur intelligent de tarification dégressive -->
-  <div class="quote-banner">
-    <div class="quote-main">
-      <i class="bi bi-lightning-charge-fill"></i>
-      <div>
-        <strong>Simulation en direct : {{ pricingQuote.units | number:'1.0-0' }} crédits</strong>
-        <span>
-          Tarif appliqué : <b>{{ pricingQuote.unitPrice }} FCFA / crédit</b> (Formule {{ pricingQuote.planName }})
-          · Total : <b>{{ pricingQuote.totalFcfa | number:'1.0-0' }} FCFA</b>
-        </span>
-      </div>
-    </div>
-    <div class="quote-badges">
-      <span class="badge-upgrade" *ngIf="pricingQuote.autoUpgraded">
-        <i class="bi bi-stars"></i> Surclassement auto vers {{ pricingQuote.planName }} ({{ pricingQuote.durationDays }}j)
-      </span>
-      <span class="badge-savings" *ngIf="pricingQuote.savingsFcfa > 0">
-        Économie : -{{ pricingQuote.savingsFcfa | number:'1.0-0' }} FCFA
-      </span>
-    </div>
-  </div>
-
-  <div class="alert alert-danger" *ngIf="error">{{ error }}</div>
-  <div class="alert alert-success" *ngIf="success">{{ success }}</div>
-
-  <!-- Reçu de paiement Mobile Money après confirmation -->
-  <div class="receipt-banner" *ngIf="lastReceipt">
-    <div class="receipt-left">
-      <i class="bi bi-patch-check-fill"></i>
-      <div>
-        <strong>Reçu de paiement Mobile Money · Réf. {{ lastReceipt.reference }}</strong>
-        <p class="mb-0">
-          Opérateur : <b>{{ paymentMethodLabel(lastReceipt.paymentMethod) }}</b>
-          <span *ngIf="lastReceipt.payerPhone"> ({{ lastReceipt.payerPhone }})</span> ·
-          Montant réglé : <b>{{ lastReceipt.amount | number:'1.0-0' }} FCFA</b> ·
-          Nouveau solde : <b>{{ lastReceipt.balanceAfter | number:'1.0-0' }} crédits</b>
-        </p>
-      </div>
-    </div>
-    <button type="button" class="btn-ghost btn-sm" (click)="lastReceipt = null">Fermer</button>
-  </div>
-
-  <section class="balance-panel">
-    <div>
-      <span class="panel-label">Solde disponible</span>
-      <strong>{{ walletBalance | number:'1.0-0' }} crédits</strong>
-      <small>Valable sur SMS CI, WhatsApp et Email.</small>
-    </div>
-    <div>
-      <span class="panel-label">Formule active</span>
-      <strong>{{ activeSubscription?.planName || 'Essentiel' }}</strong>
-      <small *ngIf="activeSubscription">Valide jusqu'au {{ activeSubscription.expiresAt | date:'dd/MM/yyyy' }}</small>
-    </div>
-    <div>
-      <span class="panel-label">Tarification unitaire active</span>
-      <strong>{{ activeSubscription?.pricePerSms || 20 }} FCFA / unité</strong>
-      <small>Débité uniquement lors des envois effectifs.</small>
-    </div>
+  <p class="text-muted small">Les volumes affichés sont les totaux inclus pour {{ periodLabel(months()) }}, utilisables pendant la période.</p>
+  @if (catalogueLoading()) { <p role="status">Chargement des offres…</p> }
+  <section class="plans-grid" aria-label="Forfaits multicanaux">
+    @for (plan of visiblePlans(); track plan.code) {
+      <article class="plan-card" [class.featured]="plan.serviceTier === 'PROFESSIONNEL'">
+        <div class="plan-header"><span>{{ plan.name }}</span>@if (plan.serviceTier === 'PROFESSIONNEL') { <em>Recommandé PME</em> }</div>
+        <div class="plan-body">
+          <div class="price"><strong>{{ plan.packagePrice | number:'1.0-0' }}</strong><span>XOF / {{ periodLabel(plan.durationMonths) }}</span></div>
+          <p class="text-muted small">{{ (plan.packagePrice || 0) / (plan.durationMonths || 1) | number:'1.0-0' }} XOF / mois en équivalent · paiement du forfait en une fois.</p>
+          <dl class="quota-list">
+            <div><dt>Crédits SMS</dt><dd>{{ plan.includedSms | number }}</dd></div>
+            <div><dt>Messages WhatsApp</dt><dd>{{ plan.includedWhatsapp | number }}</dd></div>
+            <div><dt>E-mails</dt><dd>{{ plan.includedEmail | number }}</dd></div>
+          </dl>
+          <ul>@for (feature of features(plan); track feature) { <li><i class="bi bi-check2" aria-hidden="true"></i> {{ feature }}</li> }</ul>
+        </div>
+        <button type="button" class="plan-action" (click)="openPackCheckout(plan)" [disabled]="loading() || !workspace.selectedCompanyId()">Choisir {{ plan.name }} · {{ periodLabel(plan.durationMonths) }}</button>
+      </article>
+    }
   </section>
+  <p class="text-muted small mt-3">Les messages SMS longs consomment plusieurs segments. WhatsApp utilise des modèles approuvés par Meta pour les campagnes. Les quotas proposés concernent la Côte d’Ivoire. La configuration et la disponibilité des comptes Orange, Meta et SMTP restent nécessaires.</p>
+  <p class="text-muted small">Les achats de forfaits Calipso n’achètent pas automatiquement des bundles dans votre compte Orange ou des crédits Meta.</p>
 
-  <div class="section-title">Choisissez votre Pack Formule (Déblocage immédiat + Crédits inclus)</div>
-
-  <section class="plans-grid">
-    <article
-      class="plan-card"
-      *ngFor="let plan of plans"
-      [class.featured]="plan.code === 'AVANCE'"
-      [class.current]="isCurrentPlan(plan)">
-      <div class="plan-header">
-        <span>Pack {{ plan.name }}</span>
-        <em *ngIf="plan.code === 'AVANCE'">Recommandé PME</em>
-        <em class="savings-pill" *ngIf="plan.code !== 'AVANCE' && planSavingsPercent(plan) > 0">
-          -{{ planSavingsPercent(plan) }}%
-        </em>
+  @if (receipt(); as payment) {
+    <div class="receipt-banner" role="status">
+      <div><strong>{{ payment.paymentStatus === 'PENDING' ? 'Paiement en attente' : 'Transaction' }} · {{ payment.reference }}</strong><p class="mb-1">{{ payment.amount | number }} XOF · {{ payment.paymentStatus }}</p>
+        @if (payment.paymentStatus === 'PENDING' && payment.checkoutUrl) { <a class="btn-atlas" [href]="payment.checkoutUrl" target="_blank" rel="noopener noreferrer">Continuer le paiement</a> }
       </div>
+    </div>
+  }
 
-      <div class="plan-body">
-        <div class="price">
-          <strong>{{ plan.pricePerSms | number:'1.0-0' }}</strong>
-          <span>FCFA / crédit</span>
+  <h3 class="section-title mt-4">Historique des transactions</h3>
+  <section class="transactions-panel" aria-label="Historique des transactions">
+    @for (transaction of transactions(); track transaction.id) {
+      <article class="transaction-entry">
+        <div><strong>{{ transaction.reason }}</strong><small>{{ transaction.createdAt | date:'dd/MM/yyyy HH:mm' }} · {{ transaction.reference }}</small></div>
+        <div><span>{{ transaction.paymentStatus === 'PENDING' ? 'Prévu : ' : transaction.type === 'DEBIT' ? '−' : '+' }}{{ transaction.smsUnits | number }} {{ transaction.channel || 'SMS' }}</span>
+          @if (transaction.whatsappUnits) { <span>+{{ transaction.whatsappUnits | number }} WhatsApp</span> }
+          @if (transaction.emailUnits) { <span>+{{ transaction.emailUnits | number }} e-mails</span> }
         </div>
-
-        <div class="pack-summary-box">
-          <span>Seuil du pack : <b>{{ plan.minRechargeUnits | number:'1.0-0' }} crédits</b></span>
-          <small>Soit {{ planPackCost(plan) | number:'1.0-0' }} FCFA TTC</small>
+        <div><strong>{{ transaction.amount | number }} XOF</strong><small>{{ transaction.paymentStatus }}</small>
+          @if (transaction.paymentStatus === 'PENDING' && transaction.checkoutUrl) { <a [href]="transaction.checkoutUrl" target="_blank" rel="noopener noreferrer">Payer</a> }
         </div>
-
-        <p>{{ planAudience(plan) }}</p>
-
-        <ul>
-          <li><i class="bi bi-check2"></i> Validité du tarif : <b>{{ plan.durationDays }} jours</b></li>
-          <li><i class="bi bi-check2"></i> Min. d'activation : <b>{{ plan.minRechargeUnits | number:'1.0-0' }} crédits</b></li>
-          <li *ngFor="let feature of planFeatures(plan)"><i class="bi bi-check2"></i> {{ feature }}</li>
-        </ul>
-      </div>
-
-      <button
-        class="plan-action"
-        [class.current-action]="isCurrentPlan(plan)"
-        [disabled]="loading"
-        (click)="openPackCheckout(plan)">
-        <i class="bi" [ngClass]="isCurrentPlan(plan) ? 'bi-plus-circle' : 'bi-phone-fill'"></i>
-        {{
-          isCurrentPlan(plan)
-            ? 'Recharger ce pack (' + (planPackCost(plan) | number:'1.0-0') + ' F)'
-            : 'Activer (' + (planPackCost(plan) | number:'1.0-0') + ' FCFA)'
-        }}
-      </button>
-    </article>
+      </article>
+    } @empty { <p class="empty-state">Aucune transaction enregistrée.</p> }
   </section>
-
-  <div class="section-title mt-4">Livre de compte & Historique des transactions Mobile Money</div>
-
-  <section class="transactions-panel">
-    <div class="transaction-row transaction-head">
-      <span>Date & Référence</span>
-      <span>Opération</span>
-      <span>Moyen de paiement</span>
-      <span>Crédits</span>
-      <span>Montant</span>
-      <span>Solde après</span>
-      <span>Détail</span>
-    </div>
-
-    <div class="transaction-row" *ngFor="let transaction of transactions">
-      <div>
-        <div class="fw-semibold">{{ transaction.createdAt | date:'dd/MM/yyyy HH:mm' }}</div>
-        <small class="text-muted font-monospace" *ngIf="transaction.reference">{{ transaction.reference }}</small>
-      </div>
-      <span [class.credit]="transaction.type === 'CREDIT'" [class.debit]="transaction.type === 'DEBIT'">
-        {{ transactionTypeLabel(transaction.type) }}
-      </span>
-      <span>
-        <span class="method-badge" [attr.data-method]="transaction.paymentMethod || 'SYSTEM'">
-          {{ paymentMethodLabel(transaction.paymentMethod) }}
-        </span>
-        <small class="d-block text-muted" *ngIf="transaction.payerPhone">{{ transaction.payerPhone }}</small>
-      </span>
-      <span [class.credit]="transaction.type === 'CREDIT'" [class.debit]="transaction.type === 'DEBIT'">
-        {{ transaction.type === 'DEBIT' ? '-' : '+' }}{{ transaction.smsUnits | number:'1.0-0' }}
-      </span>
-      <span class="fw-bold">{{ transaction.amount || 0 | number:'1.0-0' }} FCFA</span>
-      <span>
-        <strong *ngIf="transaction.balanceAfter !== undefined && transaction.balanceAfter !== null">
-          {{ transaction.balanceAfter | number:'1.0-0' }}
-        </strong>
-        <span *ngIf="transaction.balanceAfter === undefined || transaction.balanceAfter === null">—</span>
-      </span>
-      <span>{{ transaction.reason }}</span>
-    </div>
-
-    <div class="empty-state" *ngIf="!transactions.length">
-      Aucune transaction enregistrée pour le moment.
-    </div>
-  </section>
-
-  <!-- MODAL GUICHET DE PAIEMENT MOBILE MONEY CÔTE D'IVOIRE -->
-  <div class="checkout-backdrop" *ngIf="checkoutModalOpen" (click)="closeCheckoutModal()">
-    <div class="checkout-modal" (click)="$event.stopPropagation()">
-      <div class="checkout-header">
-        <div>
-          <span class="checkout-eyebrow">Guichet Sécurisé · Côte d'Ivoire (XOF)</span>
-          <h3>
-            {{
-              checkoutMode === 'PACK' && selectedPlanForPack
-                ? 'Souscription Pack ' + selectedPlanForPack.name
-                : 'Rechargement Portefeuille Crédits'
-            }}
-          </h3>
-        </div>
-        <button type="button" class="btn-close-modal" (click)="closeCheckoutModal()">
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </div>
-
-      <div class="checkout-body">
-        <!-- Ajustement du volume de crédits -->
-        <div class="checkout-field-group">
-          <label class="form-label fw-bold">
-            Volume de crédits à créditer
-            <small class="text-muted" *ngIf="checkoutMode === 'PACK' && selectedPlanForPack">
-              (Minimum {{ selectedPlanForPack.minRechargeUnits | number:'1.0-0' }} crédits pour le Pack {{ selectedPlanForPack.name }})
-            </small>
-          </label>
-          <div class="d-flex gap-2 align-items-center">
-            <input
-              type="number"
-              class="form-control"
-              [min]="checkoutMode === 'PACK' && selectedPlanForPack ? selectedPlanForPack.minRechargeUnits : 100"
-              step="100"
-              [(ngModel)]="rechargeUnits">
-            <div class="quick-pills-modal d-flex gap-1">
-              <button
-                type="button"
-                class="btn-ghost btn-sm"
-                *ngFor="let amt of [500, 1000, 5000]"
-                (click)="rechargeUnits = amt">
-                {{ amt }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Choix de l'opérateur Mobile Money CI -->
-        <div class="checkout-field-group">
-          <label class="form-label fw-bold">Choisissez votre moyen de paiement (Côte d'Ivoire)</label>
-          <div class="operators-grid">
-            <button
-              type="button"
-              class="operator-card"
-              *ngFor="let opt of paymentOptions"
-              [class.selected]="selectedPaymentMethod === opt.code"
-              (click)="selectedPaymentMethod = opt.code">
-              <div class="operator-top">
-                <i class="bi" [ngClass]="opt.icon" [style.color]="opt.accentColor"></i>
-                <span class="operator-badge">{{ opt.badge }}</span>
-              </div>
-              <strong>{{ opt.name }}</strong>
-              <small>{{ opt.prefixHint }}</small>
-            </button>
-          </div>
-        </div>
-
-        <!-- Numéro Mobile Money Payeur -->
-        <div class="checkout-field-group" *ngIf="selectedPaymentMethod !== 'CARD'">
-          <label class="form-label fw-bold">
-            Numéro Mobile Money à débiter ({{ currentPaymentOption.name }})
-          </label>
-          <input
-            type="tel"
-            class="form-control"
-            placeholder="+225 07 08 09 10 11"
-            [(ngModel)]="payerPhone">
-          <small class="operator-instruction">
-            <i class="bi bi-info-circle-fill"></i> {{ currentPaymentOption.instruction }}
-          </small>
-        </div>
-
-        <div class="checkout-field-group" *ngIf="selectedPaymentMethod === 'ORANGE_MONEY_CI'">
-          <label class="form-label fw-bold">Code de paiement Orange Money (#144*82#) <small class="text-muted">(optionnel en mode Push)</small></label>
-          <input
-            type="text"
-            class="form-control"
-            maxlength="6"
-            placeholder="Ex: 1234"
-            [(ngModel)]="otpCode">
-        </div>
-
-        <!-- Récapitulatif Financier FCFA -->
-        <div class="checkout-summary-box">
-          <div class="summary-line">
-            <span>Formule / Palier appliqué</span>
-            <strong>Pack {{ pricingQuote.planName }} (valide {{ pricingQuote.durationDays }} jours)</strong>
-          </div>
-          <div class="summary-line">
-            <span>Crédits ajoutés au portefeuille</span>
-            <strong>+{{ pricingQuote.units | number:'1.0-0' }} crédits</strong>
-          </div>
-          <div class="summary-line">
-            <span>Tarif unitaire appliqué</span>
-            <strong>{{ pricingQuote.unitPrice }} FCFA / crédit</strong>
-          </div>
-          <div class="summary-line savings" *ngIf="pricingQuote.savingsFcfa > 0">
-            <span>Remise sur volume</span>
-            <strong>-{{ pricingQuote.savingsFcfa | number:'1.0-0' }} FCFA</strong>
-          </div>
-          <hr>
-          <div class="summary-line total">
-            <span>Net à payer ({{ currentPaymentOption.name }})</span>
-            <strong>{{ pricingQuote.totalFcfa | number:'1.0-0' }} FCFA</strong>
-          </div>
-        </div>
-
-        <div class="alert alert-danger mt-2 mb-0" *ngIf="error">{{ error }}</div>
-      </div>
-
-      <div class="checkout-footer">
-        <button type="button" class="btn-ghost" (click)="closeCheckoutModal()" [disabled]="loading">
-          Annuler
-        </button>
-        <button type="button" class="btn-atlas" (click)="confirmMobilePayment()" [disabled]="loading">
-          <i class="bi bi-shield-check"></i>
-          <span>
-            {{
-              loading
-                ? 'Validation en cours...'
-                : 'Confirmer et Payer ' + (pricingQuote.totalFcfa | number:'1.0-0') + ' FCFA'
-            }}
-          </span>
-        </button>
-      </div>
-    </div>
-  </div>
 </div>
+
+<dialog #checkoutDialog class="checkout-modal" aria-labelledby="checkout-title" (cancel)="$event.preventDefault(); closeCheckout()">
+  <form [formGroup]="checkout" (ngSubmit)="confirmMobilePayment()">
+    <header class="checkout-header"><div><span class="checkout-eyebrow">Souscription multicanale</span><h3 id="checkout-title">{{ selectedPlan()?.name }} · {{ periodLabel(selectedPlan()?.durationMonths) }}</h3></div><button type="button" class="btn-close-modal" aria-label="Fermer" (click)="closeCheckout()" [disabled]="loading()">×</button></header>
+    <fieldset class="checkout-body border-0 m-0" [disabled]="loading()">
+      <legend class="visually-hidden">Paiement du forfait sélectionné</legend>
+      <label for="payment-method" class="form-label">Moyen de paiement</label>
+      <select id="payment-method" class="form-select mb-3" formControlName="paymentMethod">@for (option of paymentOptions; track option.code) { <option [value]="option.code">{{ option.name }}</option> }</select>
+      @if (checkout.controls.paymentMethod.value !== 'CARD') { <label for="payer-phone" class="form-label">Numéro du compte Mobile Money</label><input id="payer-phone" class="form-control mb-3" formControlName="payerPhone" type="tel" autocomplete="tel" placeholder="+225…"> }
+      @if (selectedPlan(); as plan) {
+        <dl class="quota-list"><div><dt>SMS</dt><dd>{{ plan.includedSms | number }}</dd></div><div><dt>WhatsApp</dt><dd>{{ plan.includedWhatsapp | number }}</dd></div><div><dt>E-mails</dt><dd>{{ plan.includedEmail | number }}</dd></div></dl>
+        <p>Validité : {{ periodLabel(plan.durationMonths) }} à compter de l’activation.</p>
+        <p class="summary-line total"><span>Total du forfait</span><strong>{{ plan.packagePrice | number }} XOF</strong></p>
+      }
+      @if (error()) { <p class="alert alert-danger mb-0" role="alert">{{ error() }}</p> }
+    </fieldset>
+    <footer class="checkout-footer"><button type="button" class="btn-ghost" (click)="closeCheckout()" [disabled]="loading()">Annuler</button><button type="submit" class="btn-atlas" [disabled]="loading()">{{ loading() ? 'Traitement…' : 'Payer ' + (selectedPlan()?.packagePrice | number) + ' XOF' }}</button></footer>
+  </form>
+</dialog>

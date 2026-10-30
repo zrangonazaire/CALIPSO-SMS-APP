@@ -39,6 +39,14 @@ public class WalletTransaction {
 
     private Integer balanceAfter;
 
+    @Enumerated(EnumType.STRING)
+    private com.calipso.campaign.CampaignChannel channel;
+    @ManyToOne
+    private SubscriptionPlan purchasedPlan;
+    private Integer whatsappUnits;
+    private Integer emailUnits;
+    private Integer packageDurationMonths;
+
     private String reference;
 
     @Enumerated(EnumType.STRING)

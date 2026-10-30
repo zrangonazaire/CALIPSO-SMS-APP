@@ -11,6 +11,8 @@ export interface Company {
   contactName?: string;
   businessType?: string;
   smsBalance?: number;
+  whatsappBalance?: number | null;
+  emailBalance?: number | null;
   active?: boolean;
   createdAt?: string;
 }
@@ -33,6 +35,28 @@ export interface CompanyIntegrationSettings {
   smtpPassword?: string;
   smtpPasswordConfigured: boolean;
   smtpStartTls: boolean;
+}
+
+export interface OrangeConnectionConfiguration {
+  tokenUrl: string;
+  messagingUrl: string;
+  contractsUrl: string;
+}
+
+export interface SmtpConnectionStatus {
+  connected: boolean;
+  security: string;
+  message: string;
+}
+
+export interface OrangeConnectionStatus {
+  authenticated: boolean;
+  tokenType: string;
+  tokenExpiresAt: string;
+  contractsAccessible: boolean;
+  availableUnits: number;
+  contracts: OrangeSmsContract[];
+  message: string;
 }
 
 export interface PlatformCompanySummary {
@@ -227,7 +251,8 @@ export interface ManualSmsResponse {
 }
 
 export type SmsSendSource = 'CAMPAIGN' | 'MANUAL';
-export type SubscriptionPlanCode = 'ESSENTIEL' | 'STANDARD' | 'AVANCE' | 'VOLUME';
+export type SubscriptionPlanCode = 'ESSENTIEL' | 'STANDARD' | 'AVANCE' | 'VOLUME'
+  | `${'ESSENTIEL' | 'PROFESSIONNEL' | 'COMPLET'}_${3 | 6 | 12}M`;
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 export type WalletTransactionType = 'CREDIT' | 'DEBIT' | 'REFUND';
 export type PaymentMethod =
@@ -300,6 +325,12 @@ export interface SubscriptionPlan {
   durationDays: number;
   minRechargeUnits: number;
   active: boolean;
+  serviceTier?: 'ESSENTIEL' | 'PROFESSIONNEL' | 'COMPLET';
+  durationMonths?: number;
+  packagePrice?: number;
+  includedSms?: number;
+  includedWhatsapp?: number;
+  includedEmail?: number;
 }
 
 export interface CompanySubscription {
@@ -312,12 +343,16 @@ export interface CompanySubscription {
   status: SubscriptionStatus;
   startedAt: string;
   expiresAt: string;
+  durationMonths?: number;
+  packagePrice?: number;
 }
 
 export interface CompanySubscriptionSummary {
   companyId: number;
   companyName: string;
   smsBalance: number;
+  whatsappBalance?: number | null;
+  emailBalance?: number | null;
   activeSubscription?: CompanySubscription | null;
   lastTransaction?: WalletTransaction | null;
 }
@@ -330,6 +365,9 @@ export interface WalletTransaction {
   planName?: string;
   type: WalletTransactionType;
   smsUnits: number;
+  channel?: CampaignChannel;
+  whatsappUnits?: number;
+  emailUnits?: number;
   unitPrice?: number;
   amount?: number;
   balanceAfter?: number;

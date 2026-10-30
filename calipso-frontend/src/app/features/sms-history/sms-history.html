@@ -4,6 +4,7 @@
       <span class="eyebrow"><i class="bi bi-activity"></i> Suivi temps réel</span>
       <h2 class="page-title mb-1">Journal d'activité multicanal</h2>
       <p class="text-muted mb-0">Retrouvez l'historique complet de vos diffusions SMS, WhatsApp et Email.</p>
+      <p class="text-muted small mt-2 mb-0">« Accepté par le fournisseur » confirme la prise en charge du message. « Livré » confirme sa réception grâce à un accusé de livraison.</p>
     </div>
   </header>
 
@@ -12,8 +13,8 @@
 
   <section class="history-toolbar calipso-card p-3">
     <div>
-      <label class="form-label">Canal</label>
-      <select class="form-select" [ngModel]="channelFilter()" (ngModelChange)="channelFilter.set($event)">
+      <label class="form-label" for="history-channel">Canal</label>
+      <select id="history-channel" class="form-select" [ngModel]="channelFilter()" (ngModelChange)="channelFilter.set($event)">
         <option value="ALL">Tous les canaux</option>
         <option value="SMS">SMS Pro</option>
         <option value="WHATSAPP">WhatsApp</option>
@@ -22,8 +23,8 @@
     </div>
 
     <div>
-      <label class="form-label">Origine</label>
-      <select class="form-select" [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">
+      <label class="form-label" for="history-source">Origine</label>
+      <select id="history-source" class="form-select" [ngModel]="sourceFilter()" (ngModelChange)="sourceFilter.set($event)">
         <option value="ALL">Toutes les origines</option>
         <option value="CAMPAIGN">Campagnes</option>
         <option value="MANUAL">Envoi Express</option>
@@ -31,22 +32,22 @@
     </div>
 
     <div>
-      <label class="form-label">Statut</label>
-      <select class="form-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+      <label class="form-label" for="history-status">Statut</label>
+      <select id="history-status" class="form-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
         <option value="ALL">Tous les statuts</option>
         <option *ngFor="let status of statuses" [value]="status">{{ statusLabel(status) }}</option>
       </select>
     </div>
 
     <div>
-      <label class="form-label">Recherche</label>
-      <input class="form-control" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Numéro, email, campagne, texte...">
+      <label class="form-label" for="history-search">Recherche</label>
+      <input id="history-search" class="form-control" type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Numéro, email, campagne, texte...">
     </div>
   </section>
 
   <section class="metric-grid">
     <article class="metric-card">
-      <span>Messages affichés</span>
+      <span>Messages correspondant aux filtres</span>
       <strong>{{ filteredHistory().length }}</strong>
     </article>
     <article class="metric-card">
@@ -65,11 +66,13 @@
 
   <section class="history-list calipso-card p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h5 class="fw-bold mb-0">Détail des messages</h5>
+      <h3 #messageTitle tabindex="-1" class="h5 fw-bold mb-0">Détail des messages</h3>
       <span class="text-muted small" *ngIf="loading()">Actualisation...</span>
     </div>
 
-    <div class="history-row" *ngFor="let item of filteredHistory()">
+    <app-pagination label="messages du journal" position="en haut" [total]="filteredHistory().length" [page]="page()" [disabled]="loading()" (pageChange)="changePage($event)" />
+    @for (item of pagedHistory().items; track item.id) {
+    <div class="history-row">
       <div class="history-main">
         <div class="history-topline">
           <span class="channel-pill" [ngClass]="(item.channel || 'SMS').toLowerCase()">
@@ -81,6 +84,15 @@
         </div>
         <div class="small fw-semibold text-dark mt-1" *ngIf="item.subject">Objet : {{ item.subject }}</div>
         <p class="mb-1 mt-1">{{ item.message }}</p>
+        @if (item.errorMessage) {
+          <p class="text-danger small mb-1">{{ item.errorMessage }}</p>
+        }
+        @if ((!item.channel || item.channel === 'SMS') && item.status === 'SENT') {
+          <p class="text-muted small mb-1">Réception sur le téléphone non confirmée.</p>
+        }
+        @if (item.deliveryStatus) {
+          <p class="text-muted small mb-1">Accusé du fournisseur : {{ item.deliveryStatus }}</p>
+        }
         <small class="text-muted">
           {{ item.campaignName || 'Envoi Express direct' }} · {{ (item.sentAt || item.createdAt) | date:'dd/MM/yyyy HH:mm' }}
           <ng-container *ngIf="item.providerResourceId">
@@ -94,6 +106,8 @@
       </div>
     </div>
 
+    }
+    <app-pagination label="messages du journal" position="en bas" [total]="filteredHistory().length" [page]="page()" [disabled]="loading()" (pageChange)="changePage($event)" />
     <div class="empty-state text-center text-muted py-5" *ngIf="!loading() && filteredHistory().length === 0">
       Aucun message enregistré pour ces critères.
     </div>

@@ -1,0 +1,4 @@
+# For an existing HTTPS proxy on the VPS; edge remains disabled.
+services:
+  frontend:
+    ports: ['127.0.0.1:${CALIPSO_HTTP_PORT:-18080}:8080']

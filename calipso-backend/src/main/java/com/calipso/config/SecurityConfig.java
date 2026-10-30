@@ -16,9 +16,14 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Arrays;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class SecurityConfig {
+
+    @Value("${calipso.security.allowed-origins:http://localhost:4200,http://localhost:4250}")
+    private String allowedOrigins = "http://localhost:4200,http://localhost:4250";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, BearerTokenAuthFilter bearerTokenAuthFilter) throws Exception {
@@ -34,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/login",
+                                "/api/v1/auth/configuration",
                                 "/api/v1/auth/setup",
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/forgot-password",
@@ -62,7 +68,8 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(origin -> !origin.isBlank()).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(false);

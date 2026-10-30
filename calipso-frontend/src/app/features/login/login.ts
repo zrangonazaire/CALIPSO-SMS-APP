@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth';
@@ -14,6 +14,14 @@ import { CampaignChannel } from '../../core/models/api.models';
 export class Login {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  readonly publicRegistrationEnabled = signal(false);
+
+  constructor() {
+    this.auth.configuration().subscribe({
+      next: settings => this.publicRegistrationEnabled.set(settings.publicRegistrationEnabled),
+      error: () => this.publicRegistrationEnabled.set(false),
+    });
+  }
 
   mode: 'login' | 'register' | 'forgot' = 'login';
   forgotStep: 1 | 2 = 1;
@@ -42,6 +50,7 @@ export class Login {
   info = '';
 
   switchMode(newMode: 'login' | 'register' | 'forgot'): void {
+    if (newMode === 'register' && !this.publicRegistrationEnabled()) return;
     this.mode = newMode;
     this.forgotStep = 1;
     this.error = '';
@@ -66,6 +75,7 @@ export class Login {
   }
 
   registerAccount(): void {
+    if (!this.publicRegistrationEnabled()) return;
     if (
       !this.setupForm.companyName.trim() ||
       !this.setupForm.fullName.trim() ||

@@ -30,6 +30,10 @@ export class AuthService {
     return localStorage.getItem(this.tokenKey);
   }
 
+  configuration(): Observable<{ publicRegistrationEnabled: boolean }> {
+    return this.http.get<{ publicRegistrationEnabled: boolean }>(`${this.apiUrl}/configuration`);
+  }
+
   get isAuthenticated(): boolean {
     return !!this.token && !!this.currentUser();
   }

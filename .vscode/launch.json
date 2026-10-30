@@ -14,6 +14,7 @@
             "type": "java",
             "name": "CalipsoApplication",
             "request": "launch",
+            "preLaunchTask": "Calipso: compiler le backend",
             "mainClass": "com.calipso.CalipsoApplication",
             "projectName": "calipso"
         }

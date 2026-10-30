@@ -4,3 +4,7 @@ target
 .git
 .gitignore
 docker-compose.yml
+*.local.properties
+.env*
+*.key
+*.pem

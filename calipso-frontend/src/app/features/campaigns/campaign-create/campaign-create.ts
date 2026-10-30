@@ -375,9 +375,12 @@ export class CampaignCreate implements OnInit {
     },
   ];
 
-  readonly currentCompanyBalance = computed(() => {
-    return this.workspace.activeCompany()?.smsBalance ?? 0;
-  });
+  readonly currentCompanyBalance = () => {
+    const company = this.workspace.activeCompany();
+    if (this.channel === 'WHATSAPP') return company?.whatsappBalance ?? company?.smsBalance ?? 0;
+    if (this.channel === 'EMAIL') return company?.emailBalance ?? company?.smsBalance ?? 0;
+    return company?.smsBalance ?? 0;
+  };
 
   ngOnInit(): void {
     const ch = this.route.snapshot.queryParamMap.get('channel') as CampaignChannel | null;

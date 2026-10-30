@@ -5,8 +5,14 @@ public record CompanySubscriptionSummaryResponse(
         String companyName,
         Integer smsBalance,
         CompanySubscriptionResponse activeSubscription,
-        WalletTransactionResponse lastTransaction
+        WalletTransactionResponse lastTransaction,
+        Integer whatsappBalance,
+        Integer emailBalance
 ) {
+    public CompanySubscriptionSummaryResponse(Long companyId, String companyName, Integer smsBalance,
+            CompanySubscriptionResponse activeSubscription, WalletTransactionResponse lastTransaction) {
+        this(companyId, companyName, smsBalance, activeSubscription, lastTransaction, null, null);
+    }
     public CompanySubscriptionSummaryResponse(
             Long companyId,
             String companyName,

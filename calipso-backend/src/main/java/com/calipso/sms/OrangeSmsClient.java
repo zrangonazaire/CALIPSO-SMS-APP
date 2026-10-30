@@ -42,16 +42,19 @@ public class OrangeSmsClient {
     private final Map<String, CompanyToken> companyTokens = new java.util.HashMap<>();
     private record CompanyToken(String value, Instant expiresAt) { }
 
+    private String companyTokenKey(String basic) {
+        try {
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(basic.getBytes(StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
+    }
+
     private synchronized String companyAccessToken(String clientId, String clientSecret, boolean refresh)
             throws IOException, InterruptedException {
         String basic = Base64.getEncoder().encodeToString((clientId.trim() + ":" + clientSecret).getBytes(StandardCharsets.UTF_8));
-        String cacheKey;
-        try {
-            cacheKey = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
-                    .digest(basic.getBytes(StandardCharsets.UTF_8)));
-        } catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
+        String cacheKey = companyTokenKey(basic);
         CompanyToken cached = companyTokens.get(cacheKey);
-        if (!refresh && cached != null && Instant.now().isBefore(cached.expiresAt())) return cached.value();
+        if (!refresh && cached != null && Instant.now().isBefore(cached.expiresAt().minusSeconds(TOKEN_EXPIRY_SAFETY_SECONDS))) return cached.value();
         companyTokens.remove(cacheKey);
         HttpRequest request = HttpRequest.newBuilder(URI.create(properties.tokenUrl()))
                 .timeout(Duration.ofSeconds(properties.requestTimeoutSeconds()))
@@ -63,9 +66,46 @@ public class OrangeSmsClient {
         JsonNode body = objectMapper.readTree(response.body());
         String token = body.path("access_token").asText("");
         if (token.isBlank()) throw new IOException("Orange n’a pas retourné de jeton d’accès.");
-        companyTokens.put(cacheKey, new CompanyToken(token, Instant.now().plusSeconds(
-                Math.max(0, body.path("expires_in").asLong(3600) - TOKEN_EXPIRY_SAFETY_SECONDS))));
+        companyTokens.put(cacheKey, new CompanyToken(token, Instant.now().plusSeconds(Math.max(0, body.path("expires_in").asLong(3600)))));
         return token;
+    }
+
+    public record ConnectionStatus(boolean authenticated, String tokenType, Instant tokenExpiresAt,
+            boolean contractsAccessible, int availableUnits, List<OrangeSmsContract> contracts, String message) {}
+
+    // Validates authentication and reads contracts only: no SMS, purchase or wallet update.
+    public synchronized ConnectionStatus checkCompanyConnection(String clientId, String clientSecret)
+            throws IOException, InterruptedException {
+        String token = companyAccessToken(clientId, clientSecret, false);
+        HttpResponse<String> response = null;
+        try {
+            for (int attempt = 0; attempt < 2; attempt++) {
+                var request = HttpRequest.newBuilder(URI.create(properties.contractsUrl()))
+                        .timeout(Duration.ofSeconds(properties.requestTimeoutSeconds()))
+                        .header("Authorization", "Bearer " + token).header("Accept", APPLICATION_JSON).GET().build();
+                response = httpClient().send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() != 401 || attempt == 1) break;
+                token = companyAccessToken(clientId, clientSecret, true);
+            }
+            var cached = companyTokens.get(companyTokenKey(Base64.getEncoder().encodeToString(
+                    (clientId.trim() + ":" + clientSecret).getBytes(StandardCharsets.UTF_8))));
+            if (response.statusCode() != 200) {
+                return new ConnectionStatus(true, "Bearer", cached.expiresAt(), false, 0, List.of(),
+                        "Token obtenu. Lecture du contrat Orange refusée (HTTP " + response.statusCode() + ").");
+            }
+            var contracts = parseSmsContracts(objectMapper.readTree(response.body()));
+            int units = contracts.stream().filter(this::isAvailableContract)
+                    .filter(c -> c.expirationDate() != null && !isExpired(c.expirationDate()))
+                    .mapToInt(c -> Math.max(0, c.availableUnits() == null ? 0 : c.availableUnits())).sum();
+            return new ConnectionStatus(true, "Bearer", cached.expiresAt(), true, units, contracts,
+                    units > 0 ? "Authentification et forfait Orange vérifiés." : "Authentification réussie. Aucun crédit disponible sur un contrat non expiré.");
+        } catch (IOException exception) {
+            var cached = companyTokens.get(companyTokenKey(Base64.getEncoder().encodeToString(
+                    (clientId.trim() + ":" + clientSecret).getBytes(StandardCharsets.UTF_8))));
+            if (cached == null) throw exception;
+            return new ConnectionStatus(true, "Bearer", cached.expiresAt(), false, 0, List.of(),
+                    "Token obtenu. Impossible de lire les contrats Orange actuellement.");
+        }
     }
 
     private String accessToken;

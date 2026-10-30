@@ -1,0 +1,39 @@
+:host {
+  display: block;
+}
+.orange-auth {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dce3ed;
+  color: #263650;
+}
+h6 {
+  font-weight: 700;
+}
+p {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #526078;
+  margin: 0.5rem 0;
+}
+.configured {
+  color: #166534;
+}
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.alert {
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+input[readonly] {
+  background: #f6f8fc;
+  color: #35435c;
+}
+button:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #315ac4;
+  outline-offset: 3px;
+}

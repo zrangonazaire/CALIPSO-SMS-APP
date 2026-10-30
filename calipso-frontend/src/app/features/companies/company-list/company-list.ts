@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, inject } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
+import { switchMap } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -11,6 +12,7 @@ import {
   CompanyUserRole,
   ImportProfile,
   PlatformOverview,
+  SmtpConnectionStatus,
 } from '../../../core/models/api.models';
 import { CompanyService } from '../../../core/services/company';
 import { CompanyIntegrationService } from '../../../core/services/company-integration';
@@ -18,10 +20,11 @@ import { CompanyUserService } from '../../../core/services/company-user';
 import { ImportProfileService } from '../../../core/services/import-profile';
 import { PlatformService } from '../../../core/services/platform';
 import { WorkspaceService } from '../../../core/services/workspace';
+import { OrangeConnection } from '../orange-connection/orange-connection';
 
 @Component({
   selector: 'app-company-list',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, OrangeConnection],
   templateUrl: './company-list.html',
   styleUrl: './company-list.scss',
 })
@@ -33,6 +36,7 @@ export class CompanyList {
   private readonly profileService = inject(ImportProfileService);
   private readonly integrationService = inject(CompanyIntegrationService);
   private readonly platformService = inject(PlatformService);
+  private readonly destroyRef = inject(DestroyRef);
 
   users: CompanyUser[] = [];
   profiles: ImportProfile[] = [];
@@ -57,6 +61,39 @@ export class CompanyList {
   adminResetPasswordValue = '';
   platformOverview?: PlatformOverview;
   integrationSettings: CompanyIntegrationSettings = this.emptyIntegrationSettings();
+  readonly integrationLoading = signal(false);
+  readonly integrationSaving = signal(false);
+  readonly integrationReady = signal(false);
+  private integrationGeneration = 0;
+  private smtpGeneration = 0;
+  readonly smtpTesting = signal(false);
+  readonly smtpResult = signal<SmtpConnectionStatus | undefined>(undefined);
+
+  private resetSmtpTest(): void {
+    this.smtpGeneration++;
+    this.smtpTesting.set(false);
+    this.smtpResult.set(undefined);
+  }
+
+  testSavedSmtp(): void {
+    if (!this.workspace.isPlatformAdmin() || !this.integrationReady() || this.integrationLoading()
+        || this.integrationSaving() || this.smtpTesting() || !this.selectedCompanyId) return;
+    const companyId = this.selectedCompanyId;
+    const generation = ++this.smtpGeneration;
+    this.smtpTesting.set(true);
+    this.smtpResult.set(undefined);
+    this.integrationService.testSmtp(companyId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: result => {
+        if (companyId !== this.selectedCompanyId || generation !== this.smtpGeneration) return;
+        this.smtpTesting.set(false); this.smtpResult.set(result);
+      },
+      error: err => {
+        if (companyId !== this.selectedCompanyId || generation !== this.smtpGeneration) return;
+        this.smtpTesting.set(false);
+        this.smtpResult.set({ connected: false, security: '', message: err.error?.message || 'Impossible de tester la connexion SMTP enregistrée.' });
+      },
+    });
+  }
 
   constructor() {
     inject(ActivatedRoute).queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -79,9 +116,26 @@ export class CompanyList {
   }
 
   saveIntegrations(): void {
-    if (!this.workspace.isPlatformAdmin() || !this.selectedCompanyId) return;
-    this.integrationService.save(this.selectedCompanyId, this.integrationSettings).subscribe({
+    if (!this.workspace.isPlatformAdmin() || !this.selectedCompanyId || !this.integrationReady()
+        || this.integrationLoading() || this.integrationSaving()
+        || this.integrationSettings.companyId !== this.selectedCompanyId) return;
+    const companyId = this.selectedCompanyId;
+    const companyName = this.selectedCompany?.name || 'l’entreprise sélectionnée';
+    const generation = this.integrationGeneration;
+    this.resetSmtpTest();
+    this.error = '';
+    this.success = '';
+    this.integrationSaving.set(true);
+    let saved = false;
+    this.integrationService.save(companyId, { ...this.integrationSettings }).pipe(
+      switchMap(() => {
+        saved = true;
+        return this.integrationService.get(companyId);
+      }),
+    ).subscribe({
       next: (settings) => {
+        if (companyId !== this.selectedCompanyId || generation !== this.integrationGeneration) return;
+        this.integrationSaving.set(false);
         this.integrationSettings = {
           ...settings,
           orangeClientId: undefined,
@@ -89,9 +143,15 @@ export class CompanyList {
           whatsappAccessToken: undefined,
           smtpPassword: undefined,
         };
-        this.success = 'Les intégrations de l’entreprise ont été enregistrées. Les secrets ne sont jamais renvoyés par le serveur.';
+        this.success = `Configuration enregistrée et relue pour ${companyName}. Les champs secrets restent masqués.`;
       },
-      error: (err) => (this.error = err.error?.message || 'Impossible d’enregistrer les intégrations.'),
+      error: (err) => {
+        if (companyId !== this.selectedCompanyId || generation !== this.integrationGeneration) return;
+        this.integrationSaving.set(false);
+        this.error = saved
+          ? 'Enregistrement effectué, mais la relecture a échoué. Rechargez la configuration pour vérifier les valeurs enregistrées.'
+          : err.error?.message || 'Impossible d’enregistrer les intégrations.';
+      },
     });
   }
 
@@ -118,6 +178,11 @@ export class CompanyList {
     const company = this.selectedCompany;
     this.settingsForm = company ? { ...company } : this.emptyCompanyForm();
     this.integrationSettings = this.emptyIntegrationSettings(companyId);
+    this.resetSmtpTest();
+    const generation = ++this.integrationGeneration;
+    this.integrationReady.set(false);
+    this.integrationLoading.set(false);
+    this.integrationSaving.set(false);
 
     if (!companyId) {
       this.users = [];
@@ -136,9 +201,19 @@ export class CompanyList {
     });
 
     if (this.workspace.isPlatformAdmin()) {
+      this.integrationLoading.set(true);
       this.integrationService.get(companyId).subscribe({
-        next: (settings) => (this.integrationSettings = { ...settings }),
-        error: () => (this.error = 'Impossible de charger les intégrations de cette entreprise.'),
+        next: (settings) => {
+          if (companyId !== this.selectedCompanyId || generation !== this.integrationGeneration) return;
+          this.integrationSettings = { ...settings };
+          this.integrationLoading.set(false);
+          this.integrationReady.set(true);
+        },
+        error: () => {
+          if (companyId !== this.selectedCompanyId || generation !== this.integrationGeneration) return;
+          this.integrationLoading.set(false);
+          this.error = 'Impossible de charger les intégrations de cette entreprise. Rechargez la page avant de modifier la configuration.';
+        },
       });
       this.loadPlatformOverview();
     }

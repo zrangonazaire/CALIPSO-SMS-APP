@@ -1,6 +1,7 @@
 package com.calipso.subscription;
 
 import com.calipso.billing.TransactionType;
+import com.calipso.campaign.CampaignChannel;
 import com.calipso.compagny.Company;
 import com.calipso.compagny.CompanyRepository;
 import com.calipso.compagny.RechargeWalletRequest;
@@ -34,6 +35,8 @@ public class SubscriptionService {
     public List<SubscriptionPlanResponse> findPlans() {
         return planRepository.findByActiveTrueOrderByPricePerSmsDesc()
                 .stream()
+                .filter(plan -> plan.getPackagePrice() != null)
+                .sorted(Comparator.comparingInt(SubscriptionPlan::getPackagePrice))
                 .map(SubscriptionPlanResponse::from)
                 .toList();
     }
@@ -41,8 +44,10 @@ public class SubscriptionService {
     @Transactional
     public CompanySubscriptionSummaryResponse getCompanySubscription(Long companyId) {
         Company company = findCompany(companyId);
+        CompanySubscription latest = subscriptionRepository.findFirstByCompanyIdOrderByStartedAtDesc(companyId).orElse(null);
         CompanySubscription activeSubscription = findActiveSubscription(companyId)
-                .orElseGet(() -> ensureStarterSubscription(company).orElse(null));
+                .orElseGet(() -> latest != null && latest.getPlan().getPackagePrice() != null
+                        ? latest : ensureStarterSubscription(company).orElse(null));
         return toSummary(company, activeSubscription, null);
     }
 
@@ -53,7 +58,8 @@ public class SubscriptionService {
             SubscriptionPlanCode explicitPlanCode
     ) {
         int units = (requestedUnits == null || requestedUnits <= 0) ? 100 : requestedUnits;
-        List<SubscriptionPlan> activePlans = planRepository.findByActiveTrueOrderByPricePerSmsDesc();
+        List<SubscriptionPlan> activePlans = planRepository.findByActiveTrueOrderByPricePerSmsDesc().stream()
+                .filter(plan -> plan.getPackagePrice() == null).toList();
 
         SubscriptionPlan currentPlan = companyId != null
                 ? subscriptionRepository.findFirstByCompanyIdAndStatusOrderByStartedAtDesc(companyId, SubscriptionStatus.ACTIVE)
@@ -70,12 +76,15 @@ public class SubscriptionService {
             SubscriptionPlan explicitPlan = planRepository.findByCode(explicitPlanCode)
                     .filter(p -> Boolean.TRUE.equals(p.getActive()))
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Formule introuvable"));
+            if (explicitPlan.getPackagePrice() != null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette offre multicanale s’achète à prix fixe depuis le catalogue des forfaits.");
+            }
             if (units < explicitPlan.getMinRechargeUnits()) {
                 units = explicitPlan.getMinRechargeUnits();
             }
             appliedPlan = explicitPlan;
             autoUpgraded = currentPlan == null || !currentPlan.getCode().equals(explicitPlan.getCode());
-        } else if (currentPlan != null) {
+        } else if (currentPlan != null && currentPlan.getPackagePrice() == null) {
             if (volumeTierPlan.getPricePerSms() < currentPlan.getPricePerSms()) {
                 appliedPlan = volumeTierPlan;
                 autoUpgraded = true;
@@ -106,63 +115,35 @@ public class SubscriptionService {
 
     @Transactional
     public CompanySubscriptionSummaryResponse subscribe(Long companyId, SubscribeRequest request) {
-        Company company = findCompany(companyId);
         SubscriptionPlan plan = planRepository.findByCode(request.planCode())
                 .filter(item -> Boolean.TRUE.equals(item.getActive()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Formule introuvable"));
-
-        int minUnits = plan.getMinRechargeUnits() == null ? 100 : plan.getMinRechargeUnits();
-        int unitsToBuy = request.smsUnits() == null ? minUnits : request.smsUnits();
-
-        if (unitsToBuy < minUnits) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La formule " + plan.getName() + " nécessite un achat minimum de " + minUnits + " crédits ("
-                            + (minUnits * plan.getPricePerSms()) + " FCFA)."
-            );
+        if (plan.getPackagePrice() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette ancienne formule n’est plus commercialisée. Choisissez une offre de 3, 6 ou 12 mois.");
         }
-
-        int amountFcfa = unitsToBuy * plan.getPricePerSms();
+        if (request.smsUnits() != null && !request.smsUnits().equals(plan.getMinRechargeUnits())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les volumes d’un forfait multicanal sont fixes.");
+        }
+        Company company = lockedCompany(companyId);
         PaymentMethod method = request.paymentMethod() == null ? PaymentMethod.WAVE_CI : request.paymentMethod();
+        if (method == PaymentMethod.SYSTEM) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Moyen de paiement invalide.");
         String payerPhone = (request.payerPhone() == null || request.payerPhone().isBlank())
                 ? company.getPhone()
                 : request.payerPhone();
-
-        MobilePaymentGatewayService.PaymentChargeResult paymentResult = paymentGatewayService.processPayment(
-                company.getId(),
-                company.getName(),
-                amountFcfa,
-                unitsToBuy,
-                method,
-                payerPhone,
-                "Souscription Pack " + plan.getName() + " (" + unitsToBuy + " crédits)"
-        );
-
-        CompanySubscription subscription = activatePlanSubscription(company, plan);
-
-        int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
-        int newBalance = currentBalance + unitsToBuy;
-        company.setSmsBalance(newBalance);
-        companyRepository.save(company);
-
-        WalletTransaction transaction = transactionRepository.save(WalletTransaction.builder()
-                .company(company)
-                .subscription(subscription)
-                .type(TransactionType.CREDIT)
-                .smsUnits(unitsToBuy)
-                .unitPrice(plan.getPricePerSms())
-                .amount(amountFcfa)
-                .balanceAfter(newBalance)
-                .reference(paymentResult.reference())
-                .paymentMethod(paymentResult.paymentMethod())
-                .paymentStatus(paymentResult.status())
-                .payerPhone(paymentResult.normalizedPhone())
-                .providerName(paymentResult.providerName())
-                .checkoutUrl(paymentResult.checkoutUrl())
-                .reason("Pack " + plan.getName() + " · " + paymentResult.paymentMethod().getLabel())
-                .build());
-
-        return toSummary(company, subscription, transaction);
+        var payment = paymentGatewayService.processPayment(companyId, company.getName(), plan.getPackagePrice(),
+                plan.getMinRechargeUnits(), method, payerPhone, "Forfait " + plan.getName() + " · " + plan.getDurationMonths() + " mois");
+        var transaction = WalletTransaction.builder().company(company).purchasedPlan(plan)
+                .type(TransactionType.CREDIT).smsUnits(plan.getMinRechargeUnits()).unitPrice(0)
+                .whatsappUnits(plan.getIncludedWhatsapp()).emailUnits(plan.getIncludedEmail())
+                .packageDurationMonths(plan.getDurationMonths()).amount(plan.getPackagePrice())
+                .balanceAfter(value(company.getSmsBalance())).reference(payment.reference())
+                .paymentMethod(payment.paymentMethod()).paymentStatus(payment.status())
+                .payerPhone(payment.normalizedPhone()).providerName(payment.providerName()).checkoutUrl(payment.checkoutUrl())
+                .reason("Forfait " + plan.getName() + " · " + plan.getDurationMonths() + " mois · SMS, WhatsApp et e-mail").build();
+        if (payment.status() == PaymentStatus.COMPLETED) applyPackage(transaction);
+        transactionRepository.save(transaction);
+        return toSummary(company, transaction.getSubscription() != null ? transaction.getSubscription()
+                : findActiveSubscription(companyId).orElse(null), transaction);
     }
 
     @Transactional
@@ -189,10 +170,10 @@ public class SubscriptionService {
                 .orElse(currentSubscription.getPlan());
 
         CompanySubscription effectiveSubscription = currentSubscription;
-        if (Boolean.TRUE.equals(simulation.autoUpgraded())
-                || !currentSubscription.getPlan().getCode().equals(targetPlan.getCode())) {
+        if (currentSubscription.getPlan().getPackagePrice() == null && (Boolean.TRUE.equals(simulation.autoUpgraded())
+                || !currentSubscription.getPlan().getCode().equals(targetPlan.getCode()))) {
             effectiveSubscription = activatePlanSubscription(company, targetPlan);
-        } else {
+        } else if (currentSubscription.getPlan().getPackagePrice() == null) {
             // Prolonge la date d'expiration si une recharge est effectuée sur la formule active
             LocalDateTime minExpiry = LocalDateTime.now().plusDays(targetPlan.getDurationDays());
             if (effectiveSubscription.getExpiresAt().isBefore(minExpiry)) {
@@ -219,7 +200,7 @@ public class SubscriptionService {
         );
 
         int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
-        int newBalance = currentBalance + units;
+        int newBalance = paymentResult.status() == PaymentStatus.COMPLETED ? Math.addExact(currentBalance, units) : currentBalance;
         company.setSmsBalance(newBalance);
         companyRepository.save(company);
 
@@ -253,9 +234,15 @@ public class SubscriptionService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction introuvable : " + webhook.reference()));
 
         String normalizedStatus = webhook.status() == null ? "COMPLETED" : webhook.status().trim().toUpperCase();
+        if (transaction.getPaymentStatus() != PaymentStatus.PENDING) {
+            return WalletTransactionResponse.from(transaction);
+        }
         if ("ACCEPTED".equals(normalizedStatus) || "SUCCESS".equals(normalizedStatus) || "COMPLETED".equals(normalizedStatus)) {
-            if (transaction.getPaymentStatus() == PaymentStatus.PENDING) {
-                Company company = transaction.getCompany();
+            if (transaction.getPurchasedPlan() != null) {
+                transaction.setCompany(lockedCompany(transaction.getCompany().getId()));
+                applyPackage(transaction);
+            } else {
+                Company company = lockedCompany(transaction.getCompany().getId());
                 int currentBalance = company.getSmsBalance() == null ? 0 : company.getSmsBalance();
                 int newBalance = currentBalance + transaction.getSmsUnits();
                 company.setSmsBalance(newBalance);
@@ -296,8 +283,8 @@ public class SubscriptionService {
                 .subscription(subscription)
                 .type(TransactionType.DEBIT)
                 .smsUnits(smsUnits)
-                .unitPrice(subscription.getPlan().getPricePerSms())
-                .amount(smsUnits * subscription.getPlan().getPricePerSms())
+                .unitPrice(subscription.getPlan().getPackagePrice() == null ? subscription.getPlan().getPricePerSms() : 0)
+                .amount(subscription.getPlan().getPackagePrice() == null ? smsUnits * subscription.getPlan().getPricePerSms() : 0)
                 .balanceAfter(newBalance)
                 .reference(paymentGatewayService.generateReference(PaymentMethod.SYSTEM))
                 .paymentMethod(PaymentMethod.SYSTEM)
@@ -388,8 +375,15 @@ public class SubscriptionService {
     }
 
     private CompanySubscription activatePlanSubscription(Company company, SubscriptionPlan plan) {
+        return activatePlanSubscription(company, plan, plan.getDurationMonths());
+    }
+
+    private CompanySubscription activatePlanSubscription(Company company, SubscriptionPlan plan, Integer months) {
         LocalDateTime now = LocalDateTime.now();
-        findActiveSubscription(company.getId()).ifPresent(current -> {
+        var previous = findActiveSubscription(company.getId());
+        LocalDateTime termStart = previous.filter(current -> current.getPlan().getCode() == plan.getCode())
+                .map(CompanySubscription::getExpiresAt).orElse(now);
+        previous.ifPresent(current -> {
             current.setStatus(SubscriptionStatus.CANCELLED);
             subscriptionRepository.save(current);
         });
@@ -399,7 +393,7 @@ public class SubscriptionService {
                 .plan(plan)
                 .status(SubscriptionStatus.ACTIVE)
                 .startedAt(now)
-                .expiresAt(now.plusDays(plan.getDurationDays()))
+                .expiresAt(months == null ? now.plusDays(plan.getDurationDays()) : termStart.plusMonths(months))
                 .build());
     }
 
@@ -438,7 +432,11 @@ public class SubscriptionService {
     private CompanySubscription requireActiveSubscription(Long companyId) {
         Company company = findCompany(companyId);
         return findActiveSubscription(companyId)
-                .or(() -> ensureStarterSubscription(company))
+                .or(() -> {
+                    var latest = subscriptionRepository.findFirstByCompanyIdOrderByStartedAtDesc(companyId);
+                    if (latest.isPresent() && latest.get().getPlan().getPackagePrice() != null) return Optional.empty();
+                    return ensureStarterSubscription(company);
+                })
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune souscription active"));
     }
 
@@ -452,7 +450,63 @@ public class SubscriptionService {
                 company.getName(),
                 company.getSmsBalance() == null ? 0 : company.getSmsBalance(),
                 CompanySubscriptionResponse.from(activeSubscription),
-                lastTransaction == null ? null : WalletTransactionResponse.from(lastTransaction)
+                lastTransaction == null ? null : WalletTransactionResponse.from(lastTransaction),
+                company.getWhatsappBalance(), company.getEmailBalance()
         );
+    }
+
+    private static int value(Integer units) { return units == null ? 0 : units; }
+
+    private Company lockedCompany(Long id) {
+        return companyRepository.findLockedById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
+    }
+
+    private void applyPackage(WalletTransaction transaction) {
+        Company company = transaction.getCompany();
+        company.setSmsBalance(Math.addExact(value(company.getSmsBalance()), transaction.getSmsUnits()));
+        company.setWhatsappBalance(Math.addExact(value(company.getWhatsappBalance()), value(transaction.getWhatsappUnits())));
+        company.setEmailBalance(Math.addExact(value(company.getEmailBalance()), value(transaction.getEmailUnits())));
+        companyRepository.save(company);
+        transaction.setBalanceAfter(company.getSmsBalance());
+        transaction.setSubscription(activatePlanSubscription(company, transaction.getPurchasedPlan(), transaction.getPackageDurationMonths()));
+    }
+
+    public int availableBalance(Company company, CampaignChannel channel) {
+        return switch (channel) {
+            case SMS -> value(company.getSmsBalance());
+            case WHATSAPP -> company.getWhatsappBalance() == null ? value(company.getSmsBalance()) : company.getWhatsappBalance();
+            case EMAIL -> company.getEmailBalance() == null ? value(company.getSmsBalance()) : company.getEmailBalance();
+        };
+    }
+
+    @Transactional
+    public void validateBalance(Company company, CampaignChannel channel, int units) {
+        requireActiveSubscription(company.getId());
+        if (units < 0 || availableBalance(company, channel) < units) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solde " + channel + " insuffisant : "
+                    + availableBalance(company, channel) + " disponible(s), " + units + " requis.");
+        }
+    }
+
+    @Transactional
+    public void debitMessages(Company company, CampaignChannel channel, int units, String reason) {
+        if (units <= 0) return;
+        if (channel == CampaignChannel.SMS || channel == CampaignChannel.WHATSAPP && company.getWhatsappBalance() == null
+                || channel == CampaignChannel.EMAIL && company.getEmailBalance() == null) {
+            debitSms(company, units, reason);
+            return;
+        }
+        validateBalance(company, channel, units);
+        int balance = availableBalance(company, channel) - units;
+        if (channel == CampaignChannel.WHATSAPP) company.setWhatsappBalance(balance);
+        else company.setEmailBalance(balance);
+        companyRepository.save(company);
+        transactionRepository.save(WalletTransaction.builder().company(company)
+                .subscription(requireActiveSubscription(company.getId())).channel(channel)
+                .type(TransactionType.DEBIT).smsUnits(units).unitPrice(0).amount(0).balanceAfter(balance)
+                .reference(paymentGatewayService.generateReference(PaymentMethod.SYSTEM))
+                .paymentMethod(PaymentMethod.SYSTEM).paymentStatus(PaymentStatus.COMPLETED)
+                .providerName("CALIPSO_ENGINE").reason(reason).build());
     }
 }

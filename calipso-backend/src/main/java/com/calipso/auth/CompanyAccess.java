@@ -41,6 +41,14 @@ public class CompanyAccess {
 
     public boolean isPlatformAdmin() { return isPlatformAdmin(currentUser()); }
 
+    public boolean isPublicRegistrationEnabled() { return settings.isPublicRegistrationEnabled(); }
+
+    public void requirePublicRegistration() {
+        if (!settings.isPublicRegistrationEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Les inscriptions publiques sont fermées. Contactez votre administrateur.");
+        }
+    }
+
     public void requirePlatformAdmin() {
         if (!isPlatformAdmin()) deny();
     }

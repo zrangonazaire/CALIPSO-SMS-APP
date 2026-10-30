@@ -1,0 +1,123 @@
+name: calipso-prod
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    mem_limit: 512m
+    pids_limit: 256
+    environment:
+      POSTGRES_DB: calipso
+      POSTGRES_USER: calipso
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U calipso -d calipso']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+
+  backend:
+    image: calipso-backend:${CALIPSO_RELEASE:-production}
+    build: ./calipso-backend
+    restart: unless-stopped
+    mem_limit: 1g
+    pids_limit: 512
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:size=256m,mode=1777']
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_AUTOCONFIGURE_EXCLUDE: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+      CALIPSO_SECURITY_PUBLICREGISTRATIONENABLED: ${CALIPSO_PUBLIC_REGISTRATION_ENABLED:-true}
+      CALIPSO_DOMAIN: ${CALIPSO_DOMAIN:-calipso-sms.pro}
+      CALIPSO_SECURITY_BOOTSTRAP_USERNAME: ${CALIPSO_BOOTSTRAP_USERNAME:-admin}
+      CALIPSO_SECURITY_BOOTSTRAP_EMAIL: ${CALIPSO_BOOTSTRAP_EMAIL:?Renseignez le mail administrateur dans .env.production}
+      CALIPSO_SECURITY_BOOTSTRAP_FULL_NAME: Administrateur Calipso
+      CALIPSO_SECURITY_BOOTSTRAP_COMPANY_NAME: Calipso Platform
+      JAVA_TOOL_OPTIONS: '-XX:MaxRAMPercentage=70 -Dfile.encoding=UTF-8 -Duser.timezone=Africa/Abidjan'
+    secrets:
+      - { source: db_password, target: spring.datasource.password }
+      - { source: encryption_key, target: calipso.integrations.encryption-key }
+      - { source: bootstrap_password, target: calipso.security.bootstrap.password }
+      - { source: payment_webhook_secret, target: calipso.security.payment-webhook-secret }
+    networks: [application, data]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:8085/actuator/health]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    stop_grace_period: 45s
+    logging: *logging
+
+  frontend:
+    image: calipso-frontend:${CALIPSO_FRONTEND_RELEASE:-${CALIPSO_RELEASE:-production}}
+    build: ./calipso-frontend
+    restart: unless-stopped
+    mem_limit: 128m
+    pids_limit: 128
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:size=32m,mode=1777']
+    networks: [front, application]
+    depends_on:
+      backend: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/healthz]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+  edge:
+    image: caddy:2-alpine
+    profiles: [edge]
+    restart: unless-stopped
+    mem_limit: 128m
+    pids_limit: 128
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    ports: ['80:80', '443:443', '443:443/udp']
+    environment:
+      CALIPSO_DOMAIN: ${CALIPSO_DOMAIN:-calipso-sms.pro}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    tmpfs: ['/tmp:size=32m,mode=1777']
+    networks: [front]
+    depends_on:
+      frontend: { condition: service_healthy }
+    logging: *logging
+
+networks:
+  front:
+  application:
+  data:
+    internal: true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  db_password: { file: '${CALIPSO_SECRETS_DIR:-./deploy/.secrets}/db_password' }
+  encryption_key: { file: '${CALIPSO_SECRETS_DIR:-./deploy/.secrets}/encryption_key' }
+  bootstrap_password: { file: '${CALIPSO_SECRETS_DIR:-./deploy/.secrets}/bootstrap_password' }
+  payment_webhook_secret: { file: '${CALIPSO_SECRETS_DIR:-./deploy/.secrets}/payment_webhook_secret' }

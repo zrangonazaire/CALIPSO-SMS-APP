@@ -9,6 +9,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @org.springframework.beans.factory.annotation.Value("${calipso.security.expose-error-details:true}")
+    private boolean exposeErrorDetails = true;
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatusException(ResponseStatusException exception) {
         int status = exception.getStatusCode().value();
@@ -23,6 +26,10 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiErrorResponse> handleRuntimeException(RuntimeException exception) {
+        if (!exposeErrorDetails) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiErrorResponse(500, "Une erreur interne est survenue.", "Une erreur interne est survenue."));
+        }
         String message = exception.getMessage() == null || exception.getMessage().isBlank()
                 ? "Erreur interne"
                 : exception.getMessage();

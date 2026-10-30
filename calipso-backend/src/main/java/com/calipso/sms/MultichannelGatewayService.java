@@ -11,7 +11,6 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.util.Properties;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -36,6 +35,10 @@ public class MultichannelGatewayService {
 
     private final OrangeSmsClient orangeSmsClient;
     private final CompanyIntegrationSettingsService integrationSettings;
+    private final SmtpClient smtpClient;
+
+    @Value("${calipso.integrations.require-company-settings:false}")
+    private boolean requireCompanySettings;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${whatsapp.cloud.access-token:}")
@@ -82,12 +85,28 @@ public class MultichannelGatewayService {
     ) {
         var companySettings = companyId == null ? null : integrationSettings.findDecrypted(companyId);
         CampaignChannel effectiveChannel = channel == null ? CampaignChannel.SMS : channel;
+        if (requireCompanySettings && !isCompanyChannelConfigured(companySettings, effectiveChannel)) {
+            return SmsDeliveryResult.failed(503, "Configurez les identifiants " + effectiveChannel
+                    + " propres à cette entreprise avant l’envoi.");
+        }
         return switch (effectiveChannel) {
             case SMS -> sendSmsWithFallback(message, senderPhone, recipientTarget, companySettings);
             case WHATSAPP -> sendWhatsApp(message, recipientTarget, mediaUrl, ctaLabel, ctaUrl, companySettings);
             case EMAIL -> sendEmail(subject, message, senderPhone, recipientTarget, mediaUrl, ctaLabel, ctaUrl, companySettings);
         };
     }
+
+    private boolean isCompanyChannelConfigured(CompanyIntegrationSettingsService.DecryptedSettings settings, CampaignChannel channel) {
+        if (settings == null) return false;
+        return switch (channel) {
+            case SMS -> hasValue(settings.orangeClientId()) && hasValue(settings.orangeClientSecret());
+            case WHATSAPP -> hasValue(settings.whatsappPhoneNumberId()) && hasValue(settings.whatsappAccessToken());
+            case EMAIL -> hasValue(settings.smtpHost()) && hasValue(settings.smtpFrom())
+                    && (!hasValue(settings.smtpUsername()) || hasValue(settings.smtpPassword()));
+        };
+    }
+
+    private boolean hasValue(String value) { return value != null && !value.isBlank(); }
 
     private SmsDeliveryResult sendSmsWithFallback(
             String message,
@@ -295,17 +314,7 @@ public class MultichannelGatewayService {
             String messageId
     ) {
         try {
-            JavaMailSenderImpl sender = new JavaMailSenderImpl();
-            sender.setHost(settings.smtpHost());
-            sender.setPort(settings.smtpPort() == null ? 587 : settings.smtpPort());
-            sender.setUsername(settings.smtpUsername());
-            sender.setPassword(settings.smtpPassword());
-            Properties properties = sender.getJavaMailProperties();
-            properties.put("mail.smtp.auth", settings.smtpUsername() != null && !settings.smtpUsername().isBlank());
-            properties.put("mail.smtp.starttls.enable", settings.smtpStartTls());
-            properties.put("mail.smtp.starttls.required", settings.smtpStartTls());
-            properties.put("mail.smtp.connectiontimeout", "10000");
-            properties.put("mail.smtp.timeout", "20000");
+            JavaMailSenderImpl sender = smtpClient.createSender(settings);
             var mimeMessage = sender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "UTF-8");
             helper.setFrom(settings.smtpFrom() == null ? smtpFrom : settings.smtpFrom());
@@ -319,7 +328,7 @@ public class MultichannelGatewayService {
                     "mailto:" + recipient, messageId, "DeliveredToSmtp");
         } catch (Exception exception) {
             log.error("[Email Gateway] Échec du relais SMTP configuré pour l’entreprise.", exception);
-            return SmsDeliveryResult.failed(502, "Échec de l’envoi auprès du serveur SMTP configuré.");
+            return SmsDeliveryResult.failed(502, SmtpClient.errorMessage(exception));
         }
     }
 

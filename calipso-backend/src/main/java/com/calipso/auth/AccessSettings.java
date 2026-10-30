@@ -16,6 +16,7 @@ public class AccessSettings {
     private Set<Long> platformAdminUserIds = new HashSet<>();
     private String paymentWebhookSecret = "";
     private Bootstrap bootstrap = new Bootstrap();
+    private boolean publicRegistrationEnabled = true;
 
     @Getter
     @Setter

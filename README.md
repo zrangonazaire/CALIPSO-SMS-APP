@@ -78,6 +78,17 @@ mvn.cmd '-Dtest=CompanyIsolationHttpTest,PlatformPrivilegesTest' test
 ```
 # Administration plateforme
 
+Dans **Intégrations entreprise**, sélectionnez l’entreprise concernée avant de
+renseigner les identifiants Orange. Le Bearer est obtenu et renouvelé par le
+serveur à partir du Client ID et du Client Secret ; il ne se saisit pas dans le
+formulaire et sa valeur n’est pas renvoyée au navigateur. Le bouton **Tester la
+connexion Orange** vérifie l’authentification et lit les contrats de cette
+application Orange. Il n’enregistre pas les valeurs saisies, n’envoie aucun SMS
+et ne modifie pas les crédits Calipso. L’approbation du nom d’expéditeur doit
+être confirmée séparément auprès d’Orange. Les URLs effectivement utilisées
+sont visibles dans **Paramètres techniques Orange**. Redémarrez le backend après
+une mise à jour pour activer les nouvelles routes de diagnostic.
+
 Le compte superadministrateur est créé une seule fois au démarrage lorsque
 `CALIPSO_SECURITY_BOOTSTRAP_USERNAME` est défini. Pour initialiser le compte
 `admin`, injectez les variables suivantes dans l’environnement du backend ou
@@ -129,3 +140,49 @@ Les accusés réels nécessitent une URL HTTPS publique sur le port 443, enregis
 auprès d’Orange ; la configuration locale seule ne les active pas.
 
 Référence officielle : https://developer.orange.com/apis/sms/getting-started
+
+## SMTP par entreprise
+
+Le relais SMTP d’une entreprise utilise SSL/TLS implicite sur le port 465.
+Sur les autres ports, STARTTLS suit le réglage enregistré (habituellement
+activé pour le port 587). Les certificats restent vérifiés. Le bouton
+« Tester le SMTP enregistré » vérifie la connexion et l’authentification
+avec les paramètres sauvegardés, sans envoyer d’e-mail ni consommer de crédit.
+Ce test est réservé aux administrateurs de plateforme explicitement autorisés.
+
+## Forfaits multicanaux
+
+Le catalogue `/api/v1/subscription/plans` et la page `/subscription` proposent
+neuf forfaits par entreprise. Le prix est celui du forfait entier, avec des
+volumes fixes pour toute la période, et non un prix multiplié par les crédits SMS.
+
+| Offre | Mois | Prix XOF | Segments SMS | WhatsApp | E-mails |
+|---|---:|---:|---:|---:|---:|
+| Essentiel | 3 | 75 000 | 1 500 | 750 | 15 000 |
+| Essentiel | 6 | 135 000 | 3 000 | 1 500 | 30 000 |
+| Essentiel | 12 | 240 000 | 6 000 | 3 000 | 60 000 |
+| Professionnel | 3 | 180 000 | 6 000 | 1 500 | 45 000 |
+| Professionnel | 6 | 330 000 | 12 000 | 3 000 | 90 000 |
+| Professionnel | 12 | 600 000 | 24 000 | 6 000 | 180 000 |
+| Complet | 3 | 360 000 | 15 000 | 3 000 | 90 000 |
+| Complet | 6 | 660 000 | 30 000 | 6 000 | 180 000 |
+| Complet | 12 | 1 200 000 | 60 000 | 12 000 | 360 000 |
+
+Au démarrage, `SubscriptionPlanSeeder` met ce catalogue à jour de façon
+idempotente. Les quatre anciens codes restent en base pour les abonnements et
+transactions historiques ; ils ne sont plus proposés à la souscription.
+Les nouveaux comptes de consommation WhatsApp et e-mail deviennent distincts
+lors du premier achat multicanal ; les anciens soldes SMS restent acquis.
+Les trois quotas sont crédités après paiement confirmé, jamais pendant une
+transaction en attente. Les notifications répétées de paiement sont sans effet
+supplémentaire. Les durées utilisent des mois calendaires ; le renouvellement
+du même forfait conserve la durée restante. Une offre expirée nécessite un
+renouvellement pour reprendre les envois. Les crédits inutilisés sont conservés
+et redeviennent utilisables au renouvellement.
+
+Le prestataire d’encaissement CinetPay ou Wave doit être configuré. Une absence
+de configuration ou une erreur du prestataire n’active pas de forfait. Pour un
+environnement de démonstration uniquement, `payment.gateway.allow-local-simulation=true`
+permet explicitement la simulation locale ; cette option est désactivée par défaut.
+L’approvisionnement des comptes Orange, Meta et SMTP reste une opération distincte,
+à prendre en charge dans l’exécution commerciale du forfait inclus.

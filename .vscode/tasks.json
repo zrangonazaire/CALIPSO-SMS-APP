@@ -1,0 +1,13 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Calipso: compiler le backend",
+            "type": "process",
+            "command": "mvn.cmd",
+            "args": ["-q", "-DskipTests", "compile"],
+            "options": { "cwd": "${workspaceFolder}/calipso-backend" },
+            "problemMatcher": "$maven"
+        }
+    ]
+}

@@ -46,7 +46,7 @@ public class ManualSmsController {
         int unitsPerRecipient = gatewayService.calculateUnits(channel, request.message(), smsMessageService);
         int totalUnits = validTargets.size() * unitsPerRecipient;
 
-        subscriptionService.validateSmsBalance(company, totalUnits);
+        subscriptionService.validateBalance(company, channel, totalUnits);
 
         int sentCount = 0;
         String firstErrorMessage = null;
@@ -100,14 +100,14 @@ public class ManualSmsController {
             );
         }
 
-        subscriptionService.debitSms(company, sentUnits, "Envoi express " + channel.name());
+        subscriptionService.debitMessages(company, channel, sentUnits, "Envoi express " + channel.name());
 
         return new ManualSmsResponse(
                 targets.size(),
                 sentCount,
                 unitsPerRecipient,
                 sentUnits,
-                company.getSmsBalance()
+                subscriptionService.availableBalance(company, channel)
         );
     }
 }
